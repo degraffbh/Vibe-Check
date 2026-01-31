@@ -3,6 +3,7 @@
 * {
   font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
   box-sizing: border-box;
+  color: white;
 }
 
 html {
@@ -59,10 +60,18 @@ menu li:last-child {
   margin-left: auto;
 }
 
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-image: linear-gradient(to right bottom, #6e009d, #2b102c, #1c0020);
+}
 
-
-
-
+p {
+  font-size: 15px;
+}
 
 footer {
   flex: 0 50px;
@@ -76,7 +85,6 @@ footer {
 }
 
 footer span, footer a {
-  
   padding: 0.25%;
   align-items: center;
 }
