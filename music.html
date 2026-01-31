@@ -32,62 +32,58 @@
     </header>
     
     <main>
-    
         <!--Classes with "Box" are going to be boxes where the stuff is in (right now they are just words because css is needed)-->
         <!--Positioning of everything is also not correct obviosuly-->
-        <div class="grid-container">
+        <section class="card player-section">
             <div class="coverBox">Song Cover Box &#40;Placeholder for Youtube Iplayer API&#41;</div>
             <div class="songInfoBox">Song Info Box &#40;Placeholder for song title and artist display&#41;</div>
-        </div>
-        <div class="songStatBox">Song Stats Box &#40;Placeholder for song length and progress display&#41;</div>
-        <button name="mute" type="button" value="false">Join The Jukebox</button>
-        <!-- Clicking this button will allow the user to start hearing the jukebox, initally it will be false until the user is ready-->
+            <div class="songStatBox">Song Stats Box &#40;Placeholder for song length and progress display&#41;</div>
+            <button name="mute" class="btn btn-primary" type="button" value="false">Join The Jukebox</button>
+            <!-- Clicking this button will allow the user to start hearing the jukebox, initally it will be false until the user is ready-->
+        </section>
         
-        <div> Exmaple song cover </div>
-        <img src="songcov.jpg" height="5%" width="5%">
-        
-
-        <h2>Global Que</h2>
-        <div class="globalQueBox">Global Queue Box &#40;Placeholder for data storage of songs in the que&#41;</div>
-        <div class="songQue">
-            <ol>
-                <li class="song">Song 1 
-                  <span class="like-container">
-                    <button class="like-button" type="button">❤️</button>
-                    <span id="like-count">12</span>
-                    <span>Likes</span>
-                  </span>
-                </li>
-                <li class="song">Song 2
-                  <span class="like-container">
-                    <button class="like-button" type="button">❤️</button>
-                    <span id="like-count">5</span>
-                    <span>Likes</span>
-                  </span>
-                </li>
-                <li class="song">Song 3
-                  <span class="like-container">
-                    <button class="like-button" type="button">❤️</button>
-                    <span id="like-count">1</span>
-                    <span>Likes</span>
-                  </span>
-                </li>
-            </ol>
-        </div>
-
-        <form>
+        <section class="card queue-section">
+          <h2>Global Que</h2>
+          <div class="globalQueBox">Global Queue Box &#40;Placeholder for data storage of songs in the que&#41;</div>
+          <div class="songQue">
+              <ol>
+                  <li class="song">Song 1 
+                    <span class="like-container">
+                      <button class="btn btn-primary lb" type="button">❤️</button>
+                      <span id="like-count">12</span>
+                      <span>Likes</span>
+                    </span>
+                  </li>
+                  <li class="song">Song 2
+                    <span class="like-container">
+                      <button class="btn btn-primary lb" type="button">❤️</button>
+                      <span id="like-count">5</span>
+                      <span>Likes</span>
+                    </span>
+                  </li>
+                  <li class="song">Song 3
+                    <span class="like-container">
+                      <button class="btn btn-primary lb" type="button">❤️</button>
+                      <span id="like-count">1</span>
+                      <span>Likes</span>
+                    </span>
+                  </li>
+              </ol>
+          </div>
+          <form>
             <label for="search">Search:</label>
             <input type="text" id="search" placeholder="add a song" />
-        </form>
-
-        <h2>Chat</h2>
-        <div class="chatBox">Chat Box &#40;Placehodler for chatting feature&#41;</div>
-         <form>
-            <label for="chat">Send A Message:</label>
-            <input type="text" id="chat" placeholder="..." />
-        </form>
-    
-
+          </form>
+        </section>
+        
+        <section class="card chat-section">
+          <h2>Chat</h2>
+          <div class="chatBox">Chat Box &#40;Placehodler for chatting feature&#41;</div>
+          <form>
+              <label for="chat">Send A Message:</label>
+              <input type="text" id="chat" placeholder="..." />
+          </form>
+        </section>
     </main>
 
     <footer>

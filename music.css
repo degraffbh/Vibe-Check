@@ -59,10 +59,33 @@ menu li:last-child {
   margin-left: auto;
 }
 
+main {
+  display: grid !important;
+  grid-template-columns: 2fr 1fr 1fr; 
+  gap: 20px;
+  padding: 20px;
+  width: 100%;
+  box-sizing: border-box;
+  align-items: start; 
+  flex-grow: 1; 
+}
 
+.card {
+  width: 100%; 
+  min-width: 0; 
+  background: rgba(255, 255, 255, 0.05); 
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
 
-
-
+.btn-primary {
+  align-self: flex-start; 
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
 
 footer {
   flex: 0 50px;
@@ -76,6 +99,7 @@ footer {
 }
 
 footer span, footer a {
+  
   padding: 0.25%;
   align-items: center;
 }
