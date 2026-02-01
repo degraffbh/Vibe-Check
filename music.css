@@ -59,7 +59,7 @@ menu li:last-child {
   margin-left: auto;
 }
 
-main {
+.vibe-main {
   display: grid !important;
   grid-template-columns: 2fr 1fr 1fr; 
   gap: 20px;
