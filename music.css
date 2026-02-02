@@ -77,6 +77,63 @@ menu li:last-child {
   border-radius: 12px;
   padding: 20px;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  height: 100%;
+}
+
+.card h2 {
+  color: white;
+}
+
+.queue-section {
+  padding: 10px;
+  font-size: 0.9rem; 
+}
+
+.songQue ol {
+  padding-left: 20px;
+  margin: 0;
+}
+
+.song {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px; 
+  margin-left: -19.5px;
+  width: 107%; 
+  min-width: 0; 
+  background: rgba(255, 255, 255, 0.05); 
+  border-radius: 12px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  height: 90%;
+}
+
+.like-container {
+  display: flex;
+  align-items: center;
+  gap: 5px; 
+  width: 25%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lb {
+  padding: 2px 8px !important; 
+  font-size: 0.8rem !important;
+  height: auto;
+  min-width: unset;
+  
+}
+
+#search {
+  width: 100%;
+  padding: 5px;
+  font-size: 0.8rem;
+}
+
+#searchtext {
+  position: relative;
+  right: -2px;
 }
 
 .btn-primary {
@@ -99,7 +156,6 @@ footer {
 }
 
 footer span, footer a {
-  
   padding: 0.25%;
   align-items: center;
 }
