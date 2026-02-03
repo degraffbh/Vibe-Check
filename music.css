@@ -20,23 +20,6 @@ body {
   height: 100%;
 }
 
-header {
-  flex: 0 50px;
-  background: hsl(295, 96%, 11%);
-  color: white;
-
-  display: flex;
-  flex-direction: row;
-  justify-content: start;
-  align-items: center;
-}
-
-header h1 {
-  font-family: "Lobster", sans-serif;
-  padding-left: 1%;
-  transform: translateY(3px);
-}
-
 nav {
   flex-grow: 1; 
 }
@@ -72,6 +55,7 @@ menu li:last-child {
   box-sizing: border-box;
   align-items: start; 
   flex-grow: 1; 
+  background-image: linear-gradient(to right bottom, #6e009d, #2b102c, #1c0020);
 }
 
 .card {
@@ -86,6 +70,68 @@ menu li:last-child {
 
 .card h2 {
   color: white;
+}
+
+.player-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  border-radius: 15px;
+  max-width: 600px;
+}
+
+.coverinfo {
+  display: flex;
+  align-items: center; 
+  gap: 30px;          
+}
+
+.coverinfo video {
+  width: 45%;       
+  max-width: 400px;  
+  height: auto;     
+  border-radius: 8px;
+}
+
+.infoBox {
+  flex: 1;     
+  min-width: 0;   
+  color: white;
+  display: flex;
+  flex-direction: column;   
+  justify-content: center;  
+  align-items: center;      
+  text-align: center;       
+  padding: 20px; 
+}
+
+.infoBox h2, .infoBox h4 {
+  width: 100%;
+  text-align: center;
+  margin: 5px 0;
+
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal; 
+  line-height: 1.4em;  
+  max-height: 2.8em;      
+  margin-bottom: 10px;     
+}
+
+.progressjoin {
+  margin-top: 10%;
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.progressjoin .btn {
+  transform: translateX(25px);
 }
 
 .queue-section {
@@ -176,20 +222,4 @@ menu li:last-child {
   border-radius: 8px;
   border: none;
   cursor: pointer;
-}
-
-footer {
-  flex: 0 50px;
-  background: hsl(295, 96%, 11%);
-  color: white;
-
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-}
-
-footer span, footer a {
-  padding: 0.25%;
-  align-items: center;
 }

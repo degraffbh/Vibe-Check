@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
     <meta charset="UTF-8" />
     <!-- Tell browsers not to scale the viewport automatically -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -15,7 +15,7 @@
   <body>
      <!-- Use header, main, and footer elements to give semantic structure -->
     <header>
-      <h1>Vibe Check ♫</h1>
+      <h1 class="title">Vibe Check ♫</h1>
 
       <!-- Navigation elements -->
       <nav>
@@ -35,11 +35,21 @@
         <!--Classes with "Box" are going to be boxes where the stuff is in (right now they are just words because css is needed)-->
         <!--Positioning of everything is also not correct obviosuly-->
         <section class="card player-section">
-            <div class="coverBox">Song Cover Box &#40;Placeholder for Youtube Iplayer API&#41;</div>
-            <div class="songInfoBox">Song Info Box &#40;Placeholder for song title and artist display&#41;</div>
-            <div class="songStatBox">Song Stats Box &#40;Placeholder for song length and progress display&#41;</div>
-            <button name="mute" class="btn btn-primary" type="button" value="false">Join The Jukebox</button>
-            <!-- Clicking this button will allow the user to start hearing the jukebox, initally it will be false until the user is ready-->
+            <div class="coverinfo">
+                <video controls>
+                  <source src="Crystal Skies - VXLLAIN.mp4" type="video/mp4">
+                </video>
+                <div class="infoBox">
+                    <h2>This Is A Song Title</h2>
+                    <h4>This Is A Song Artist</h4>
+                </div>
+            </div>
+            <div class="progressjoin">
+              <div class="w3-light-grey w3-round">
+                <div class="w3-container w3-round w3-blue" style="height:12px;width:25%"></div>
+              </div>
+              <button name="mute" class="btn btn-primary" type="button" value="false">Join The Jukebox</button>
+            </div>
         </section>
         
         <section class="card queue-section">

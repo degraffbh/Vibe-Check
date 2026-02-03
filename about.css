@@ -19,23 +19,6 @@ body {
   height: 100%;
 }
 
-header {
-  flex: 0 50px;
-  background: hsl(295, 96%, 11%);
-  color: white;
-
-  display: flex;
-  flex-direction: row;
-  justify-content: start;
-  align-items: center;
-}
-
-header h1 {
-  font-family: "Lobster", sans-serif;
-  padding-left: 1%;
-  transform: translateY(3px);
-}
-
 nav {
   flex-grow: 1; 
 }
@@ -86,20 +69,4 @@ h2, h3 {
 a {
   position: relative;
   bottom: 1%;
-}
-
-footer {
-  flex: 0 50px;
-  background: hsl(295, 96%, 11%);
-  color: white;
-
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-}
-
-footer span, footer a {
-  padding: 0.25%;
-  align-items: center;
 }
