@@ -62,12 +62,12 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
-- [ ] **Visually appealing colors and layout. No overflowing elements.** - I did not complete this part of the deliverable.
-- [ ] **Use of a CSS framework** - I did not complete this part of the deliverable.
-- [ ] **All visual elements styled using CSS** - I did not complete this part of the deliverable.
-- [ ] **Responsive to window resizing using flexbox and/or grid display** - I did not complete this part of the deliverable.
-- [ ] **Use of a imported font** - I did not complete this part of the deliverable.
-- [ ] **Use of different types of selectors including element, class, ID, and pseudo selectors** - I did not complete this part of the deliverable.
+- [x] **Visually appealing colors and layout. No overflowing elements.** - I completed this part of the deliverable by using a background gradient and using a purple vibe theme, as well as making sure everything had propper padding and margins.
+- [x] **Use of a CSS framework** - I completed this part of the deliverable by using Bootstrap buttons. 
+- [x] **All visual elements styled using CSS** - I completed this part of the deliverable by having all of my html styled with css. 
+- [x] **Responsive to window resizing using flexbox and/or grid display** - I completed this part of the deliverable by using flexbox display for the majoirty of my css as well as a bit of grid display. 
+- [x] **Use of a imported font** - I completed this part of the deliverable by using an imported font for the name of the website, as well as some imported fonts for the about section. 
+- [x] **Use of different types of selectors including element, class, ID, and pseudo selectors** - I completed this part of the deliverable by using these selecters thoughout my code to be able to use css properly. 
 
 ## 🚀 React part 1: Routing deliverable
 
