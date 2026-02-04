@@ -84,6 +84,7 @@ input {
   border: 2px solid black;
   border-radius: 8px;
   outline: none;
+  color: black;
 }
 
 input::placeholder {
@@ -98,8 +99,10 @@ button {
   bottom: -5%;
 }
 
+/*----------------*/
+
 footer {
-  flex: 0 50px;
+  flex: 0 35px;
   background: hsl(295, 96%, 11%);
   color: white;
 
