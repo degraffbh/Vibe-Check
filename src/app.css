@@ -3,6 +3,7 @@
 * {
   font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
   box-sizing: border-box;
+  color: white;
 }
 
 html, body, #root {
@@ -77,15 +78,20 @@ main h1 {
   font-family:Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif
 }
 
-.login {
-  padding-top: 1%;
-}
-
 input {
   border: 2px solid black;
   border-radius: 8px;
   outline: none;
   color: black;
+}
+
+.login span {
+  margin-right: 5px; 
+  vertical-align: middle;
+}
+
+input {
+  margin-bottom: 0; 
 }
 
 input::placeholder {
@@ -94,10 +100,12 @@ input::placeholder {
   padding-left: 2%; 
 }
 
+.login {
+  padding-top: 1%;
+}
+
 button {
   position: relative;
-  left: 32%;
-  bottom: -5%;
 }
 
 /*----------------*/
