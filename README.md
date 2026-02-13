@@ -75,7 +75,7 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 
 - [x] **Bundled using Vite** - I used vite to bundle my code
 - [x] **Components** - I used multiple react components that represents all of the previous HTML/CSS
-- [x] **Router** - I used react routers to make it so users can visit all my pages of my website
+- [x] **Router** - I used react routers to make it so users can visit all my pages of my website 
 
 ## 🚀 React part 2: Reactivity deliverable
 
