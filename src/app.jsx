@@ -7,6 +7,18 @@ import { Music } from './music/music';
 import { About } from './about/about';
 
 export default function App() {
+  const [userEmail, setUserEmail] = React.useState("");
+
+  const handleLogin = (email) => {
+    setUserEmail(email);
+    localStorage.setItem("currentUser", email);
+  };
+
+  const handleLogout = () => {
+    setUserEmail("");
+    localStorage.removeItem("currentUser");
+  };
+
   return (
     <BrowserRouter>
       <div className="body">
@@ -28,14 +40,14 @@ export default function App() {
                 <li><NavLink to="login">Home</NavLink></li>
                 <li><NavLink to="music">Vibe</NavLink></li>
                 <li><NavLink to="about">About</NavLink></li>
-                <li><span className="username">Not Logged In</span></li>
+                <li><span className="username">{userEmail || "Not Logged In"}</span></li>
               </menu>
             </nav>
           </header>
           
           <Routes>
-            <Route path='/' element={<Login />} exact />
-            <Route path='/login' element={<Login />} />
+            <Route path='/' element={<Login onLogin={handleLogin} />} exact />
+            <Route path='/login' element={<Login onLogin={handleLogin} />} />
             <Route path='/music' element={<Music />} />
             <Route path='/about' element={<About />} />
             <Route path='*' element={<NotFound />} />
