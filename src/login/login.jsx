@@ -38,7 +38,7 @@ export function Login({onLogin}) {
       <form onSubmit={handleLogin}>
         <div className="login mb-1">
           <span>📧</span>
-          <input type="text" placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input type="text" placeholder="username" value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <div className="login mb-1">
           <span>🔒</span>

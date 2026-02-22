@@ -1,13 +1,23 @@
 import React from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './app.css';
-import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, NavLink, Route, Routes, Navigate } from 'react-router-dom';
 import { Login } from './login/login';
 import { Music } from './music/music';
 import { About } from './about/about';
 
+function RequireAuth({ userEmail, children }) {
+  if (!userEmail) return <Navigate to="/login" replace />;
+  return children;
+}
+
 export default function App() {
   const [userEmail, setUserEmail] = React.useState("");
+
+  React.useEffect(() => {
+    const current = localStorage.getItem("currentUser");
+    if (current) setUserEmail(current);
+  }, []);
 
   const handleLogin = (email) => {
     setUserEmail(email);
@@ -37,18 +47,35 @@ export default function App() {
             <h1>Vibe Check ♫</h1>
             <nav>
               <menu>
-                <li><NavLink to="login">Home</NavLink></li>
-                <li><NavLink to="music">Vibe</NavLink></li>
-                <li><NavLink to="about">About</NavLink></li>
-                <li><span className="username">{userEmail || "Not Logged In"}</span></li>
+                <li><NavLink to="/login">Home</NavLink></li>
+                <li>
+                  {userEmail ? (
+                    <NavLink to="/music">Vibe</NavLink>
+                  ) : (
+                    <span className="disabled" title="Log in to access Vibe">Vibe</span>
+                  )}
+                </li>
+                <li><NavLink to="/about">About</NavLink></li>
+                <li className="username-li">
+                  <span className="username">{userEmail || "Not Logged In"}</span>
+                </li>
+                <li>
+                  {userEmail && (
+                    <button className="logout btn btn-sm btn-outline-secondary" onClick={handleLogout}>Logout</button>
+                  )}
+                </li>
               </menu>
             </nav>
           </header>
           
           <Routes>
-            <Route path='/' element={<Login onLogin={handleLogin} />} exact />
+            <Route path='/' element={<Login onLogin={handleLogin} />} />
             <Route path='/login' element={<Login onLogin={handleLogin} />} />
-            <Route path='/music' element={<Music />} />
+            <Route path='/music' element={
+              <RequireAuth userEmail={userEmail}>
+                <Music />
+              </RequireAuth>
+            } />
             <Route path='/about' element={<About />} />
             <Route path='*' element={<NotFound />} />
           </Routes>

@@ -57,11 +57,9 @@ menu li a:hover {
   background-color: hsl(295, 96%, 14%);
 }
 
-menu li:last-child {
+menu li.username-li {
   margin-left: auto;
 }
-
-/*----------------*/
 
 main {
   flex: 1;
@@ -106,6 +104,12 @@ input::placeholder {
 
 button {
   position: relative;
+}
+
+.logout {
+  padding: 0px 5px;
+  margin-right: 12px;
+  transform: translateY(-1px);
 }
 
 /*----------------*/
