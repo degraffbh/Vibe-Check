@@ -2,6 +2,35 @@ import React from 'react';
 import './music.css';
 
 export function Music() {
+  const [messages, setMessages] = React.useState([
+    { id: 1, user: 'Ben DeGraff', text: 'Hi! This is a message!', isOwn: false },
+    { id: 2, user: 'You', text: 'You can send your own, it works!', isOwn: true }
+  ]);
+  const [inputValue, setInputValue] = React.useState('');
+  const currentUser = localStorage.getItem('currentUser') || 'Anonymous';
+  const chatBoxRef = React.useRef(null);
+
+  const handleSendMessage = (e) => {
+    e.preventDefault();
+    if (inputValue.trim() === '') return;
+
+    const newMessage = {
+      id: messages.length + 1,
+      user: currentUser,
+      text: inputValue,
+      isOwn: true
+    };
+
+    setMessages([...messages, newMessage]);
+    setInputValue('');
+    
+    setTimeout(() => {
+      if (chatBoxRef.current) {
+        chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+      }
+    }, 0);
+  };
+
   return (
     <main className="vibe-main">
         <section className="card player-section">
@@ -84,18 +113,23 @@ export function Music() {
         
         <section className="card chat-section">
           <h2>Chat</h2>
-          <div className="chatBox">
-            <div className="message received">
-              <span className="user-name">Ben DeGraff</span>
-              Yo, this track is fire!
-            </div>
-            <div className="message sent">
-              Glad you like it!
-            </div>
+          <div className="chatBox" ref={chatBoxRef}>
+            {messages.map((msg) => (
+              <div key={msg.id} className={`message ${msg.isOwn ? 'sent' : 'received'}`}>
+                {!msg.isOwn && <span className="user-name">{msg.user}</span>}
+                {msg.text}
+              </div>
+            ))}
           </div>
-          <form>
+          <form onSubmit={handleSendMessage}>
               <label htmlFor="chat" id="chattext">Send A Message:</label>
-              <input type="text" id="chat" placeholder="..." />
+              <input 
+                type="text" 
+                id="chat" 
+                placeholder="..." 
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+              />
           </form>
         </section>
     </main>
