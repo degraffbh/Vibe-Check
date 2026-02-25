@@ -7,8 +7,63 @@ export function Music() {
     { id: 2, user: 'You', text: 'You can send your own, it works!', isOwn: true }
   ]);
   const [inputValue, setInputValue] = React.useState('');
+  const [queue, setQueue] = React.useState([]); 
+  const [userLikes, setUserLikes] = React.useState({}); 
   const currentUser = localStorage.getItem('currentUser') || 'Anonymous';
   const chatBoxRef = React.useRef(null);
+
+  const handleAddSong = (e) => {
+    e.preventDefault();
+    if (!inputValue.trim()) return;
+    const userSong = queue.find(song => song.user === currentUser);
+    const newSong = {
+      id: Date.now().toString(),
+      title: inputValue,
+      user: currentUser,
+      likes: 0,
+      likedBy: [],
+      timestamp: Date.now()
+    };
+    let newQueue = queue;
+    if (userSong) {
+      newQueue = queue.filter(song => song.user !== currentUser);
+    }
+    setQueue([...newQueue, newSong]);
+    setInputValue('');
+  };
+
+  const handleRemoveSong = (songId) => {
+    setQueue(queue.filter(song => song.id !== songId));
+  };
+
+  const handleLikeSong = (songId) => {
+    const alreadyLiked = userLikes[songId];
+    setUserLikes({ ...userLikes, [songId]: !alreadyLiked });
+    setQueue(queue.map(song => {
+      if (song.id === songId) {
+        if (!alreadyLiked && !song.likedBy.includes(currentUser)) {
+          return {
+            ...song,
+            likes: song.likes + 1,
+            likedBy: [...song.likedBy, currentUser]
+          };
+        } else if (alreadyLiked && song.likedBy.includes(currentUser)) {
+          return {
+            ...song,
+            likes: song.likes - 1,
+            likedBy: song.likedBy.filter(u => u !== currentUser)
+          };
+        }
+      }
+      return song;
+    }));
+  };
+
+  const topSongs = [...queue]
+    .sort((a, b) => (b.likes || 0) - (a.likes || 0) || b.timestamp - a.timestamp)
+    .slice(0, 6);
+
+  //----------------------------------------------------------------
 
   const handleSendMessage = (e) => {
     e.preventDefault();
@@ -55,59 +110,39 @@ export function Music() {
           <h2>Global Queue</h2>
           <div className="songQue">
               <ol>
-                  <li className="song">
-                    <img src="songcov.jpg" alt="thumbnail" className="song-thumb" />
-                    <span className="song-name">Song 1</span>
-                    <span className="like-container">
-                      <button className="btn btn-primary lb" type="button">❤️</button>
-                      <span className="like-count">17</span>
-                    </span>
-                  </li>
-                  <li className="song">
-                    <img src="songcov.jpg" alt="thumbnail" className="song-thumb" />
-                    <span className="song-name">Song 2</span>
-                    <span className="like-container">
-                      <button className="btn btn-primary lb" type="button">❤️</button>
-                      <span className="like-count">5</span>
-                    </span>
-                  </li>
-                  <li className="song">
-                    <img src="songcov.jpg" alt="thumbnail" className="song-thumb" />
-                    <span className="song-name">Song 3</span>
-                    <span className="like-container">
-                      <button className="btn btn-primary lb" type="button">❤️</button>
-                      <span className="like-count">1</span>
-                    </span>
-                  </li>
-                  <li className="song">
-                    <img src="songcov.jpg" alt="thumbnail" className="song-thumb" />
-                    <span className="song-name">Song 4</span>
-                    <span className="like-container">
-                      <button className="btn btn-primary lb" type="button">❤️</button>
-                      <span className="like-count">1</span>
-                    </span>
-                  </li>
-                  <li className="song">
-                    <img src="songcov.jpg" alt="thumbnail" className="song-thumb" />
-                    <span className="song-name">Song 5</span>
-                    <span className="like-container">
-                      <button className="btn btn-primary lb" type="button">❤️</button>
-                      <span className="like-count">1</span>
-                    </span>
-                  </li>
-                  <li className="song">
-                    <img src="songcov.jpg" alt="thumbnail" className="song-thumb" />
-                    <span className="song-name">Song 6</span>
-                    <span className="like-container">
-                      <button className="btn btn-primary lb" type="button">❤️</button>
-                      <span className="like-count">1</span>
-                    </span>
-                  </li>
+                  {topSongs.length === 0 ? (
+                    <div style={{ padding: '1em', color: '#888' }}>Queue is empty</div>
+                  ) : (
+                    topSongs.map(song => (
+                      <li className="song" key={song.id}>
+                        <img src="songcov.jpg" alt="thumbnail" className="song-thumb" />
+                        <span className="song-name">{song.title}</span>
+                        <span className="like-container">
+                          <button
+                            className={`btn btn-primary lb${userLikes[song.id] ? ' liked' : ''}`}
+                            type="button"
+                            onClick={() => handleLikeSong(song.id)}
+                          >❤️</button>
+                          <span className="like-count">{song.likes}</span>
+                        </span>
+                        {song.user === currentUser && (
+                          <button className="btn btn-outline-danger btn-sm" style={{ marginLeft: '0.5em', padding: '2px 6px', fontSize: '0.8em' }} onClick={() => handleRemoveSong(song.id)}>✕</button>
+                        )}
+                      </li>
+                    ))
+                  )}
               </ol>
           </div>
-          <form>
-            <label htmlFor="search" id="searchtext">Search:</label>
-            <input type="search" id="search" placeholder="add a song" />
+          <form onSubmit={handleAddSong} style={{ marginTop: '1em' }}>
+            <label htmlFor="search" id="searchtext">Add a Song:</label>
+            <input
+              type="text"
+              id="search"
+              placeholder="add a song"
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
+              autoComplete="off"
+            />
           </form>
         </section>
         
