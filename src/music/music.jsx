@@ -6,19 +6,25 @@ export function Music() {
     { id: 1, user: 'Ben DeGraff', text: 'Hi! This is a message!', isOwn: false },
     { id: 2, user: 'You', text: 'You can send your own, it works!', isOwn: true }
   ]);
-  const [inputValue, setInputValue] = React.useState('');
+  const [songInput, setSongInput] = React.useState('');
+  const [chatInput, setChatInput] = React.useState('');
   const [queue, setQueue] = React.useState([]); 
   const [userLikes, setUserLikes] = React.useState({}); 
+  const [videoProgress, setVideoProgress] = React.useState(0);
+  const [inJukebox, setInJukebox] = React.useState(false);
   const currentUser = localStorage.getItem('currentUser') || 'Anonymous';
   const chatBoxRef = React.useRef(null);
+  const videoRef = React.useRef(null);
+
+  //----Queue Logic----------------------------------------------------------------
 
   const handleAddSong = (e) => {
     e.preventDefault();
-    if (!inputValue.trim()) return;
+    if (!songInput.trim()) return;
     const userSong = queue.find(song => song.user === currentUser);
     const newSong = {
       id: Date.now().toString(),
-      title: inputValue,
+      title: songInput,
       user: currentUser,
       likes: 0,
       likedBy: [],
@@ -29,7 +35,7 @@ export function Music() {
       newQueue = queue.filter(song => song.user !== currentUser);
     }
     setQueue([...newQueue, newSong]);
-    setInputValue('');
+    setSongInput('');
   };
 
   const handleRemoveSong = (songId) => {
@@ -63,21 +69,69 @@ export function Music() {
     .sort((a, b) => (b.likes || 0) - (a.likes || 0) || b.timestamp - a.timestamp)
     .slice(0, 6);
 
-  //----------------------------------------------------------------
+  //----Song Player Logic----------------------------------------------------------------
+
+  React.useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleTimeUpdate = () => {
+      const progress = (video.currentTime / video.duration) * 100;
+      setVideoProgress(progress);
+    };
+
+    const handleEnded = () => {
+      setVideoProgress(0);
+      if (topSongs.length > 0) {
+        setQueue(prevQueue => prevQueue.filter(song => song.id !== topSongs[0].id));
+      }
+    };
+
+    video.addEventListener('timeupdate', handleTimeUpdate);
+    video.addEventListener('ended', handleEnded);
+    return () => {
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+      video.removeEventListener('ended', handleEnded);
+    };
+  }, [topSongs]);
+
+  React.useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (topSongs.length > 0) {
+      video.currentTime = 0;
+      video.play().catch(err => console.log('Autoplay prevented:', err));
+    } else {
+      video.pause();
+      video.currentTime = 0;
+      setVideoProgress(0);
+    }
+  }, [topSongs.length > 0 ? topSongs[0]?.id : null]);
+
+  const handleToggleJukebox = () => {
+    const video = videoRef.current;
+    if (video) {
+      video.muted = inJukebox;
+    }
+    setInJukebox(!inJukebox);
+  };
+
+  //----Chat Logic----------------------------------------------------------------
 
   const handleSendMessage = (e) => {
     e.preventDefault();
-    if (inputValue.trim() === '') return;
+    if (chatInput.trim() === '') return;
 
     const newMessage = {
       id: messages.length + 1,
       user: currentUser,
-      text: inputValue,
+      text: chatInput,
       isOwn: true
     };
 
     setMessages([...messages, newMessage]);
-    setInputValue('');
+    setChatInput('');
     
     setTimeout(() => {
       if (chatBoxRef.current) {
@@ -86,23 +140,31 @@ export function Music() {
     }, 0);
   };
 
+  //----------------------------------------------------------------
+
   return (
     <main className="vibe-main">
         <section className="card player-section">
             <div className="coverinfo">
-                <video controls>
+                <video ref={videoRef} controlsList="nodownload nofullscreen noremoteplayback" disablePictureInPicture muted>
                   <source src="Crystal Skies - VXLLAIN.mp4" type="video/mp4" />
                 </video>
                 <div className="infoBox">
-                    <h2>This Is A Song Title</h2>
-                    <h4>This Is A Song Artist</h4>
+                    <h2>{topSongs.length > 0 ? topSongs[0].title : 'No Song Playing'}</h2>
+                    <h4>Artist - TBD</h4>
                 </div>
             </div>
             <div className="progressjoin">
               <div className="progress-bar">
-                <div className="progress-fill" style={{ width: '25%' }}></div>
+                <div className="progress-fill" style={{ width: `${videoProgress}%` }}></div>
               </div>
-              <button name="mute" className="btn btn-primary" type="button" value="false">Join The Jukebox</button>
+              <button 
+                className="joinJukebox btn btn-primary" 
+                type="button" 
+                onClick={handleToggleJukebox}
+              >
+                {inJukebox ? 'Leave The Jukebox' : 'Join The Jukebox'}
+              </button>
             </div>
         </section>
         
@@ -113,10 +175,13 @@ export function Music() {
                   {topSongs.length === 0 ? (
                     <div style={{ padding: '1em', color: '#888' }}>Queue is empty</div>
                   ) : (
-                    topSongs.map(song => (
-                      <li className="song" key={song.id}>
+                    topSongs.map((song, index) => (
+                      <li className="song" key={song.id} style={index === 0 ? { backgroundColor: 'rgba(0, 255, 100, 0.1)', borderLeft: '3px solid #00ff64' } : {}}>
                         <img src="songcov.jpg" alt="thumbnail" className="song-thumb" />
-                        <span className="song-name">{song.title}</span>
+                        <span className="song-name">
+                          {song.title}
+                          {index === 0 && <span style={{marginLeft: '0.5em', color: '#00ff64', fontSize: '0.8em', fontWeight: 'bold' }}>PLAYING NOW ▶</span>}
+                        </span>
                         <span className="like-container">
                           <button
                             className={`btn btn-primary lb${userLikes[song.id] ? ' liked' : ''}`}
@@ -139,8 +204,8 @@ export function Music() {
               type="text"
               id="search"
               placeholder="add a song"
-              value={inputValue}
-              onChange={e => setInputValue(e.target.value)}
+              value={songInput}
+              onChange={e => setSongInput(e.target.value)}
               autoComplete="off"
             />
           </form>
@@ -162,8 +227,8 @@ export function Music() {
                 type="text" 
                 id="chat" 
                 placeholder="..." 
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
               />
           </form>
         </section>
