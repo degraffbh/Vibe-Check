@@ -81,7 +81,7 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
-- [x] **All functionality implemented or mocked out** - I did complete this part of the deliverable. Chat, Song Player, and Global Queue react all coded as well as the Login react. Placeholders are used for the artist/thumbnials/actual searching feature because I need the Youtube Iplayer API and the Youtube Search API for those to work. The join jukebox button makes it so you can hear the music playing and right now it's just set to a default song whenever you add a song to the global queue. 
+- [x] **All functionality implemented or mocked out** - I did complete this part of the deliverable. Chat, Song Player, and Global Queue react all coded as well as the Login react. Placeholders are used for the artist/thumbnials/actual searching feature because I need the Youtube Iplayer API and the Youtube Search API for those to work. The join jukebox button makes it so you can hear the music playing and right now it's just set to a default song whenever you add a song to the global queue. Also, each user can only have one song in the queue at a time.
 - [x] **Hooks** - I did complete this part of the deliverable. I used react useState and useEffect hooks.
 
 ## 🚀 Service deliverable
