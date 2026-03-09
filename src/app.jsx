@@ -5,6 +5,7 @@ import { BrowserRouter, NavLink, Route, Routes, Navigate } from 'react-router-do
 import { Login } from './login/login';
 import { Music } from './music/music';
 import { About } from './about/about';
+import { logoutUser } from './service';
 
 function RequireAuth({ userEmail, children }) {
   if (!userEmail) return <Navigate to="/login" replace />;
@@ -24,9 +25,15 @@ export default function App() {
     localStorage.setItem("currentUser", email);
   };
 
-  const handleLogout = () => {
-    setUserEmail("");
-    localStorage.removeItem("currentUser");
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUserEmail("");
+      localStorage.removeItem("currentUser");
+    }
   };
 
   return (

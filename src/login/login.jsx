@@ -8,27 +8,33 @@ export function Login({onLogin}) {
   const [password, setPassword] = React.useState("");
   const navigate = useNavigate();
 
-  function handleRegister(event) {
+  async function handleRegister(event) {
     event.preventDefault();
     if (email && password) {
-      registerUser(email, password);
-      onLogin(email);
-      setEmail("");
-      setPassword("");
-      navigate("/music");
+      try {
+        const user = await registerUser(email, password);
+        onLogin(user.email);
+        setEmail("");
+        setPassword("");
+        navigate("/music");
+      } catch (err) {
+        alert(err.message || "Unable to create account");
+      }
     }
   }
 
-  function handleLogin(event) {
+  async function handleLogin(event) {
     event.preventDefault();
-    const user = loginUser(email, password);
-    if (user) {
+    if (!email || !password) return;
+
+    try {
+      const user = await loginUser(email, password);
       onLogin(user.email);
       setEmail("");
       setPassword("");
       navigate("/music");
-    } else {
-      alert("Invalid email or password");
+    } catch (err) {
+      alert(err.message || "Invalid email or password");
     }
   }
 

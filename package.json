@@ -4,10 +4,13 @@
   "description": "A collaborative music jukebox program that allows users to listen to music together.",
   "main": "index.js",
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "vite": "^7.3.1"
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently --kill-others-on-fail -n server,client -c green,blue \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "vite",
+    "dev:server": "node service/index.js 3000",
     "build": "vite build",
     "preview": "vite preview"
   },
