@@ -45,6 +45,35 @@
   border-radius: 8px;
 }
 
+.coverinfo .youtube-player {
+  width: 45%;
+  max-width: 400px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.coverinfo .youtube-player iframe {
+  width: 100%;
+  border: 0;
+  pointer-events: none;
+}
+
+.youtube-placeholder {
+  display: flex;
+  justify-content: center; 
+  align-items: center; 
+  text-align: center;
+  width: 45%;
+  max-width: 400px;
+  min-height: 225px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.25);
+}
+
 .infoBox {
   flex: 1;     
   min-width: 0;   
@@ -250,4 +279,65 @@
   font-size: 1.2rem; 
   margin-bottom: 5px;
   color: white;
+}
+
+.search-status,
+.search-error {
+  margin-top: 0;
+  margin-bottom: 6px;
+  color: #ffffff;
+  font-size: 0.85rem;
+}
+
+.search-error {
+  color: #ff9c9c;
+}
+
+.search-results {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 230px;
+  overflow-y: auto;
+}
+
+.search-results li {
+  margin-bottom: 6px;
+}
+
+.search-result-button {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: white;
+  border-radius: 8px;
+  padding: 7px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+
+.search-result-button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-container {
+  position: relative;
+}
+
+.search-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 8px);
+  max-height: 260px;
+  overflow-y: auto;
+  background: rgba(22, 18, 28, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 8px;
+  z-index: 20;
 }

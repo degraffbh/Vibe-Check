@@ -39,3 +39,16 @@ export async function logoutUser() {
         throw new Error('Logout failed');
     }
 }
+
+export async function searchYouTube(query) {
+    const response = await fetch(`/api/youtube/search?q=${encodeURIComponent(query)}`, {
+        credentials: 'include',
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(payload.msg || `YouTube search failed (${response.status})`);
+    }
+
+    return payload.items || [];
+}

@@ -1,5 +1,7 @@
 import React from 'react';
+import YouTube from 'react-youtube';
 import './music.css';
+import { searchYouTube } from '../service';
 
 export function Music() {
   const [messages, setMessages] = React.useState([
@@ -7,6 +9,9 @@ export function Music() {
     { id: 2, user: 'You', text: 'You can send your own, it works!', isOwn: true }
   ]);
   const [songInput, setSongInput] = React.useState('');
+  const [searchResults, setSearchResults] = React.useState([]);
+  const [searchError, setSearchError] = React.useState('');
+  const [isSearching, setIsSearching] = React.useState(false);
   const [chatInput, setChatInput] = React.useState('');
   const [queue, setQueue] = React.useState([]); 
   const [userLikes, setUserLikes] = React.useState({}); 
@@ -14,17 +19,27 @@ export function Music() {
   const [inJukebox, setInJukebox] = React.useState(false);
   const currentUser = localStorage.getItem('currentUser') || 'Anonymous';
   const chatBoxRef = React.useRef(null);
-  const videoRef = React.useRef(null);
+  const playerRef = React.useRef(null);
+  const intervalRef = React.useRef(null);
 
   //----Queue Logic----------------------------------------------------------------
 
   const handleAddSong = (e) => {
     e.preventDefault();
-    if (!songInput.trim()) return;
+    if (searchResults.length === 0) return;
+    addSongToQueue(searchResults[0]);
+  };
+
+  const addSongToQueue = (result) => {
+    if (!result?.videoId) return;
+
     const userSong = queue.find(song => song.user === currentUser);
     const newSong = {
-      id: Date.now().toString(),
-      title: songInput,
+      id: `${result.videoId}-${Date.now()}`,
+      videoId: result.videoId,
+      title: result.title,
+      channelTitle: result.channelTitle,
+      thumbnail: result.thumbnail,
       user: currentUser,
       likes: 0,
       likedBy: [],
@@ -36,6 +51,8 @@ export function Music() {
     }
     setQueue([...newQueue, newSong]);
     setSongInput('');
+    setSearchResults([]);
+    setSearchError('');
   };
 
   const handleRemoveSong = (songId) => {
@@ -68,53 +85,147 @@ export function Music() {
   const topSongs = [...queue]
     .sort((a, b) => (b.likes || 0) - (a.likes || 0) || b.timestamp - a.timestamp)
     .slice(0, 6);
+  const nowPlaying = topSongs[0];
 
   //----Song Player Logic----------------------------------------------------------------
 
   React.useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+    if (!songInput.trim()) {
+      setSearchResults([]);
+      setSearchError('');
+      return;
+    }
 
-    const handleTimeUpdate = () => {
-      const progress = (video.currentTime / video.duration) * 100;
-      setVideoProgress(progress);
-    };
-
-    const handleEnded = () => {
-      setVideoProgress(0);
-      if (topSongs.length > 0) {
-        setQueue(prevQueue => prevQueue.filter(song => song.id !== topSongs[0].id));
+    let cancelled = false;
+    const timeoutId = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const results = await searchYouTube(songInput.trim());
+        if (!cancelled) {
+          setSearchResults(results);
+          setSearchError('');
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setSearchResults([]);
+          setSearchError(err.message || 'Unable to search YouTube');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsSearching(false);
+        }
       }
-    };
+    }, 350);
 
-    video.addEventListener('timeupdate', handleTimeUpdate);
-    video.addEventListener('ended', handleEnded);
     return () => {
-      video.removeEventListener('timeupdate', handleTimeUpdate);
-      video.removeEventListener('ended', handleEnded);
+      cancelled = true;
+      clearTimeout(timeoutId);
     };
-  }, [topSongs]);
+  }, [songInput]);
 
   React.useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (topSongs.length > 0) {
-      video.currentTime = 0;
-      video.play().catch(err => console.log('Autoplay prevented:', err));
-    } else {
-      video.pause();
-      video.currentTime = 0;
+    if (!nowPlaying?.videoId || !playerRef.current) {
       setVideoProgress(0);
+      return;
     }
-  }, [topSongs.length > 0 ? topSongs[0]?.id : null]);
+
+    playerRef.current.loadVideoById(nowPlaying.videoId);
+  }, [nowPlaying?.id]);
+
+  React.useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
 
   const handleToggleJukebox = () => {
-    const video = videoRef.current;
-    if (video) {
-      video.muted = inJukebox;
+    const player = playerRef.current;
+    if (player) {
+      if (inJukebox) {
+        player.mute();
+      } else {
+        player.unMute();
+      }
     }
     setInJukebox(!inJukebox);
+  };
+
+  const updateProgress = () => {
+    const player = playerRef.current;
+    if (!player) return;
+
+    const duration = player.getDuration();
+    if (!duration) {
+      setVideoProgress(0);
+      return;
+    }
+
+    const currentTime = player.getCurrentTime();
+    setVideoProgress((currentTime / duration) * 100);
+  };
+
+  const startProgressTracking = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+    intervalRef.current = setInterval(updateProgress, 500);
+  };
+
+  const handlePlayerReady = (event) => {
+    playerRef.current = event.target;
+    if (!inJukebox) {
+      event.target.mute();
+    }
+    if (nowPlaying?.videoId) {
+      event.target.loadVideoById(nowPlaying.videoId);
+    }
+  };
+
+  const handlePlayerStateChange = (event) => {
+    if (!window.YT) return;
+
+    if (event.data === window.YT.PlayerState.PLAYING) {
+      startProgressTracking();
+      return;
+    }
+
+    if (event.data === window.YT.PlayerState.PAUSED) {
+      event.target.playVideo();
+      return;
+    }
+
+    if (event.data === window.YT.PlayerState.ENDED) {
+      setVideoProgress(0);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      if (nowPlaying) {
+        setQueue(prevQueue => prevQueue.filter(song => song.id !== nowPlaying.id));
+      }
+    }
+  };
+
+  const handlePlayerError = () => {
+    if (nowPlaying) {
+      setQueue(prevQueue => prevQueue.filter(song => song.id !== nowPlaying.id));
+    }
+  };
+
+  const playerOptions = {
+    width: '390',
+    height: '225',
+    playerVars: {
+      autoplay: 1,
+      controls: 0,
+      disablekb: 1,
+      fs: 0,
+      rel: 0,
+      modestbranding: 1,
+      iv_load_policy: 3,
+      playsinline: 1,
+    },
   };
 
   //----Chat Logic----------------------------------------------------------------
@@ -146,12 +257,21 @@ export function Music() {
     <main className="vibe-main">
         <section className="card player-section">
             <div className="coverinfo">
-                <video ref={videoRef} controlsList="nodownload nofullscreen noremoteplayback" disablePictureInPicture muted>
-                  <source src="Crystal Skies - VXLLAIN.mp4" type="video/mp4" />
-                </video>
+                {nowPlaying ? (
+                  <YouTube
+                    className="youtube-player"
+                    videoId={nowPlaying.videoId}
+                    opts={playerOptions}
+                    onReady={handlePlayerReady}
+                    onStateChange={handlePlayerStateChange}
+                    onError={handlePlayerError}
+                  />
+                ) : (
+                  <div className="youtube-placeholder">No video selected yet</div>
+                )}
                 <div className="infoBox">
-                    <h2>{topSongs.length > 0 ? topSongs[0].title : 'No Song Playing'}</h2>
-                    <h4>Artist - TBD</h4>
+                    <h2>{nowPlaying ? nowPlaying.title : 'No Song Playing'}</h2>
+                    <h4>{nowPlaying ? nowPlaying.channelTitle : 'Artist - TBD'}</h4>
                 </div>
             </div>
             <div className="progressjoin">
@@ -177,7 +297,7 @@ export function Music() {
                   ) : (
                     topSongs.map((song, index) => (
                       <li className="song" key={song.id} style={index === 0 ? { backgroundColor: 'rgba(0, 255, 100, 0.1)', borderLeft: '3px solid #00ff64' } : {}}>
-                        <img src="songcov.jpg" alt="thumbnail" className="song-thumb" />
+                        <img src={song.thumbnail || 'songcov.jpg'} alt="thumbnail" className="song-thumb" />
                         <span className="song-name">
                           {song.title}
                           {index === 0 && <span style={{marginLeft: '0.5em', color: '#00ff64', fontSize: '0.8em', fontWeight: 'bold' }}>PLAYING NOW ▶</span>}
@@ -190,7 +310,7 @@ export function Music() {
                           >❤️</button>
                           <span className="like-count">{song.likes}</span>
                         </span>
-                        {song.user === currentUser && (
+                        {song.user === currentUser && index !== 0 && (
                           <button className="btn btn-outline-danger btn-sm" style={{ marginLeft: '0.5em', padding: '2px 6px', fontSize: '0.8em' }} onClick={() => handleRemoveSong(song.id)}>✕</button>
                         )}
                       </li>
@@ -200,14 +320,38 @@ export function Music() {
           </div>
           <form onSubmit={handleAddSong} style={{ marginTop: '1em' }}>
             <label htmlFor="search" id="searchtext">Add a Song:</label>
-            <input
-              type="text"
-              id="search"
-              placeholder="add a song"
-              value={songInput}
-              onChange={e => setSongInput(e.target.value)}
-              autoComplete="off"
-            />
+            <div className="search-container">
+              <input
+                type="text"
+                id="search"
+                placeholder="search YouTube"
+                value={songInput}
+                onChange={e => setSongInput(e.target.value)}
+                autoComplete="off"
+              />
+              {(isSearching || searchError || searchResults.length > 0) && (
+                <div className="search-overlay">
+                  {isSearching && <div className="search-status">Searching...</div>}
+                  {searchError && <div className="search-error">{searchError}</div>}
+                  {searchResults.length > 0 && (
+                    <ul className="search-results">
+                      {searchResults.map((result) => (
+                        <li key={result.videoId}>
+                          <button
+                            type="button"
+                            className="search-result-button"
+                            onClick={() => addSongToQueue(result)}
+                          >
+                            <img src={result.thumbnail || 'songcov.jpg'} alt="result thumbnail" className="song-thumb" />
+                            <span>{result.title}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
           </form>
         </section>
         

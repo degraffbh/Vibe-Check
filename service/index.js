@@ -1,3 +1,4 @@
+require('dotenv').config();
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
 const express = require('express');
@@ -62,15 +63,57 @@ apiRouter.delete('/auth/logout', async (req, res) => {
   res.status(204).end();
 });
 
+// Search YouTube videos by query (requires authenticated user)
+apiRouter.get('/youtube/search', verifyAuth, async (req, res) => {
+  const query = `${req.query.q || ''}`.trim();
+  if (!query) {
+    res.status(400).send({ msg: 'Search query is required' });
+    return;
+  }
+
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  if (!apiKey) {
+    res.status(500).send({ msg: 'YouTube API key is not configured' });
+    return;
+  }
+
+  const searchParams = new URLSearchParams({
+    part: 'snippet',
+    type: 'video',
+    videoEmbeddable: 'true',
+    maxResults: '8',
+    q: query,
+    key: apiKey,
+  });
+
+  const response = await fetch(`https://www.googleapis.com/youtube/v3/search?${searchParams.toString()}`);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    res.status(response.status).send({ msg: payload.error?.message || 'YouTube search failed' });
+    return;
+  }
+
+  const items = (payload.items || [])
+    .filter((item) => item?.id?.videoId)
+    .map((item) => ({
+      videoId: item.id.videoId,
+      title: item.snippet?.title || 'Unknown title',
+      channelTitle: item.snippet?.channelTitle || 'Unknown channel',
+      thumbnail: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || '',
+    }));
+
+  res.send({ items });
+});
+
 // Middleware to verify that the user is authorized to call an endpoint
-const verifyAuth = async (req, res, next) => {
+async function verifyAuth(req, res, next) {
   const user = await findUser('token', req.cookies[authCookieName]);
   if (user) {
     next();
   } else {
     res.status(401).send({ msg: 'Unauthorized' });
   }
-};
+}
 
 // Default error handler
 app.use(function (err, req, res, next) {
