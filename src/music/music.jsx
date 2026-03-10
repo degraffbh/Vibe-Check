@@ -267,7 +267,7 @@ export function Music() {
                     onError={handlePlayerError}
                   />
                 ) : (
-                  <div className="youtube-placeholder">No video selected yet</div>
+                  <div className="youtube-placeholder">No song selected yet</div>
                 )}
                 <div className="infoBox">
                     <h2>{nowPlaying ? nowPlaying.title : 'No Song Playing'}</h2>
