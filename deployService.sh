@@ -47,7 +47,11 @@ ENDSSH
 
 # Step 3
 printf "\n----> Copy the distribution package to the target\n"
-scp -r -i "$key" build/. ubuntu@$hostname:services/$service
+scp -r -i "$key" build/* ubuntu@$hostname:services/$service
+
+if [[ -f "build/.env" ]]; then
+    scp -i "$key" build/.env ubuntu@$hostname:services/$service/.env
+fi
 
 # Step 4
 printf "\n----> Deploy the service on the target\n"
