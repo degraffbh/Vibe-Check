@@ -56,21 +56,30 @@ fi
 
 if [ -s "$HOME/.nvm/nvm.sh" ]; then
     . "$HOME/.nvm/nvm.sh"
+    nvm use --silent default >/dev/null 2>&1 || true
+    nvm use --silent --lts >/dev/null 2>&1 || true
 fi
 
 if ! command -v npm >/dev/null 2>&1; then
-    echo "npm not found on remote host. Ensure Node.js is installed and available for non-interactive shells."
-    exit 1
+    latest_node_bin=$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | sort -V | tail -n 1 || true)
+    if [ -n "$latest_node_bin" ]; then
+        export PATH="$latest_node_bin:$PATH"
+    fi
 fi
 
-if ! command -v pm2 >/dev/null 2>&1; then
-    echo "pm2 not found on remote host. Install it globally (e.g. npm install -g pm2) in the active Node environment."
+if ! command -v npm >/dev/null 2>&1; then
+    echo "npm not found on remote host. Install Node for ubuntu user (e.g. via nvm) and retry."
     exit 1
 fi
 
 cd services/${service}
 npm install
-pm2 restart ${service}
+
+if command -v pm2 >/dev/null 2>&1; then
+    pm2 restart ${service}
+else
+    npx --yes pm2@latest restart ${service}
+fi
 ENDSSH
 
 # Step 5
