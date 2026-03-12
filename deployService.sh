@@ -29,6 +29,14 @@ cp -rf dist build/public # move the React front end to the target distribution
 cp service/*.js build # move the back end service to the target distribution
 cp service/*.json build
 
+if [[ -f "service/.env" ]]; then
+    cp service/.env build/.env
+elif [[ -f ".env" ]]; then
+    cp .env build/.env
+else
+    printf "\nWARNING: No .env file found in service/.env or ./.env. Backend env vars (like YOUTUBE_API_KEY) will be missing.\n"
+fi
+
 # Step 2
 printf "\n----> Clearing out previous distribution on the target\n"
 ssh -T -i "$key" ubuntu@$hostname "service='${service}' bash -s" << 'ENDSSH'
