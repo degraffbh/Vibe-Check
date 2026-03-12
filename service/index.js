@@ -93,8 +93,34 @@ apiRouter.get('/youtube/search', verifyAuth, async (req, res) => {
     return;
   }
 
-  const items = (payload.items || [])
-    .filter((item) => item?.id?.videoId)
+  const searchItems = (payload.items || []).filter((item) => item?.id?.videoId);
+  const videoIds = searchItems.map((item) => item.id.videoId);
+  if (videoIds.length === 0) {
+    res.send({ items: [] });
+    return;
+  }
+
+  const detailsParams = new URLSearchParams({
+    part: 'contentDetails',
+    id: videoIds.join(','),
+    key: apiKey,
+  });
+  const detailsResponse = await fetch(`https://www.googleapis.com/youtube/v3/videos?${detailsParams.toString()}`);
+  const detailsPayload = await detailsResponse.json().catch(() => ({}));
+  if (!detailsResponse.ok) {
+    res.status(detailsResponse.status).send({ msg: detailsPayload.error?.message || 'YouTube video details failed' });
+    return;
+  }
+
+  const durationById = new Map(
+    (detailsPayload.items || []).map((item) => [
+      item.id,
+      parseYouTubeDurationToSeconds(item.contentDetails?.duration || 'PT0S'),
+    ])
+  );
+
+  const items = searchItems
+    .filter((item) => (durationById.get(item.id.videoId) ?? Number.POSITIVE_INFINITY) <= 300)
     .map((item) => ({
       videoId: item.id.videoId,
       title: item.snippet?.title || 'Unknown title',
@@ -142,6 +168,18 @@ async function findUser(field, value) {
   if (!value) return null;
 
   return users.find((u) => u[field] === value);
+}
+
+function parseYouTubeDurationToSeconds(duration) {
+  const match = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(duration || '');
+  if (!match) {
+    return 0;
+  }
+
+  const hours = Number(match[1] || 0);
+  const minutes = Number(match[2] || 0);
+  const seconds = Number(match[3] || 0);
+  return hours * 3600 + minutes * 60 + seconds;
 }
 
 // setAuthCookie in the HTTP response

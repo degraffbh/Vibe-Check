@@ -124,12 +124,13 @@ export function Music() {
   }, [songInput]);
 
   React.useEffect(() => {
-    if (!nowPlaying?.videoId || !playerRef.current) {
+    if (!nowPlaying) {
       setVideoProgress(0);
-      return;
+      playerRef.current = null;
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
     }
-
-    playerRef.current.loadVideoById(nowPlaying.videoId);
   }, [nowPlaying?.id]);
 
   React.useEffect(() => {
@@ -192,7 +193,11 @@ export function Music() {
     }
 
     if (event.data === window.YT.PlayerState.PAUSED) {
-      event.target.playVideo();
+      try {
+        event.target.playVideo();
+      } catch (err) {
+        console.error('Unable to resume paused video:', err);
+      }
       return;
     }
 
