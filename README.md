@@ -88,12 +88,12 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
-- [ ] **Node.js/Express HTTP service** - I did not complete this part of the deliverable.
-- [ ] **Static middleware for frontend** - I did not complete this part of the deliverable.
-- [ ] **Calls to third party endpoints** - I did not complete this part of the deliverable.
-- [ ] **Backend service endpoints** - I did not complete this part of the deliverable.
-- [ ] **Frontend calls service endpoints** - I did not complete this part of the deliverable.
-- [ ] **Supports registration, login, logout, and restricted endpoint** - I did not complete this part of the deliverable.
+- [x] **Node.js/Express HTTP service** - I did complete this part of the deliverable by creating an HTTP service using Node.js and Express
+- [x] **Static middleware for frontend** - I did complete this part of the deliverable
+- [x] **Calls to third party endpoints** - I did complete this part of the deliverable by calling the YouTube Data API v3 for searching songs to add to the queue
+- [x] **Backend service endpoints** - I did complete this part of the deliverable by using endpoints similar to simon for login as well as for the 3rd party API
+- [x] **Frontend calls service endpoints** - I did complete this part of the deliverable by having the frontend call the endpoints for login and searching songs. 
+- [x] **Supports registration, login, logout, and restricted endpoint** - I did not complete this part of the deliverable by making sure everything is secure by using endpoins as well as using Bycrpt
 
 ## 🚀 DB deliverable
 
