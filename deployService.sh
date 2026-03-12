@@ -45,6 +45,29 @@ scp -r -i "$key" build/* ubuntu@$hostname:services/$service
 printf "\n----> Deploy the service on the target\n"
 ssh -T -i "$key" ubuntu@$hostname << ENDSSH
 set -e
+
+if [ -f "$HOME/.profile" ]; then
+    . "$HOME/.profile"
+fi
+
+if [ -f "$HOME/.bashrc" ]; then
+    . "$HOME/.bashrc"
+fi
+
+if [ -s "$HOME/.nvm/nvm.sh" ]; then
+    . "$HOME/.nvm/nvm.sh"
+fi
+
+if ! command -v npm >/dev/null 2>&1; then
+    echo "npm not found on remote host. Ensure Node.js is installed and available for non-interactive shells."
+    exit 1
+fi
+
+if ! command -v pm2 >/dev/null 2>&1; then
+    echo "pm2 not found on remote host. Install it globally (e.g. npm install -g pm2) in the active Node environment."
+    exit 1
+fi
+
 cd services/${service}
 npm install
 pm2 restart ${service}
