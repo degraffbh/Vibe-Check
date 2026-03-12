@@ -76,9 +76,17 @@ cd "services/${service}"
 npm install
 
 if command -v pm2 >/dev/null 2>&1; then
-    pm2 restart "${service}"
+    if pm2 describe "${service}" >/dev/null 2>&1; then
+        pm2 restart "${service}" --update-env
+    else
+        pm2 start index.js --name "${service}"
+    fi
 else
-    npx --yes pm2@latest restart "${service}"
+    if npx --yes pm2@latest describe "${service}" >/dev/null 2>&1; then
+        npx --yes pm2@latest restart "${service}" --update-env
+    else
+        npx --yes pm2@latest start index.js --name "${service}"
+    fi
 fi
 ENDSSH
 
