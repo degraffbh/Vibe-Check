@@ -1,3 +1,7 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
 while getopts k:h:s: flag
 do
     case "${flag}" in
@@ -27,7 +31,8 @@ cp service/*.json build
 
 # Step 2
 printf "\n----> Clearing out previous distribution on the target\n"
-ssh -i "$key" ubuntu@$hostname << ENDSSH
+ssh -T -i "$key" ubuntu@$hostname << ENDSSH
+set -e
 rm -rf services/${service}
 mkdir -p services/${service}
 ENDSSH
@@ -38,8 +43,8 @@ scp -r -i "$key" build/* ubuntu@$hostname:services/$service
 
 # Step 4
 printf "\n----> Deploy the service on the target\n"
-ssh -i "$key" ubuntu@$hostname << ENDSSH
-bash -i
+ssh -T -i "$key" ubuntu@$hostname << ENDSSH
+set -e
 cd services/${service}
 npm install
 pm2 restart ${service}
