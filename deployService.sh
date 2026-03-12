@@ -31,10 +31,10 @@ cp service/*.json build
 
 # Step 2
 printf "\n----> Clearing out previous distribution on the target\n"
-ssh -T -i "$key" ubuntu@$hostname << ENDSSH
+ssh -T -i "$key" ubuntu@$hostname "service='${service}' bash -s" << 'ENDSSH'
 set -e
-rm -rf services/${service}
-mkdir -p services/${service}
+rm -rf "services/${service}"
+mkdir -p "services/${service}"
 ENDSSH
 
 # Step 3
@@ -43,7 +43,7 @@ scp -r -i "$key" build/* ubuntu@$hostname:services/$service
 
 # Step 4
 printf "\n----> Deploy the service on the target\n"
-ssh -T -i "$key" ubuntu@$hostname << ENDSSH
+ssh -T -i "$key" ubuntu@$hostname "service='${service}' bash -s" << 'ENDSSH'
 set -e
 
 if [ -f "$HOME/.profile" ]; then
@@ -72,13 +72,13 @@ if ! command -v npm >/dev/null 2>&1; then
     exit 1
 fi
 
-cd services/${service}
+cd "services/${service}"
 npm install
 
 if command -v pm2 >/dev/null 2>&1; then
-    pm2 restart ${service}
+    pm2 restart "${service}"
 else
-    npx --yes pm2@latest restart ${service}
+    npx --yes pm2@latest restart "${service}"
 fi
 ENDSSH
 
