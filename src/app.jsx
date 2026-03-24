@@ -1,7 +1,7 @@
 import React from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './app.css';
-import { BrowserRouter, NavLink, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter, NavLink, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import { Login } from './login/login';
 import { Music } from './music/music';
 import { About } from './about/about';
@@ -10,6 +10,16 @@ import { logoutUser } from './service';
 function RequireAuth({ userEmail, children }) {
   if (!userEmail) return <Navigate to="/login" replace />;
   return children;
+}
+
+function AlwaysOnMusic({ userEmail }) {
+  const location = useLocation();
+  if (!userEmail) return null;
+  return (
+    <div style={{ display: location.pathname === '/music' ? undefined : 'none' }}>
+      <Music />
+    </div>
+  );
 }
 
 export default function App() {
@@ -75,12 +85,13 @@ export default function App() {
             </nav>
           </header>
           
+          <AlwaysOnMusic userEmail={userEmail} />
           <Routes>
             <Route path='/' element={<Login onLogin={handleLogin} />} />
             <Route path='/login' element={<Login onLogin={handleLogin} />} />
             <Route path='/music' element={
               <RequireAuth userEmail={userEmail}>
-                <Music />
+                <></>
               </RequireAuth>
             } />
             <Route path='/about' element={<About />} />
