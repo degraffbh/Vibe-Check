@@ -1,3 +1,6 @@
+const dns = require('dns');
+dns.setServers(['8.8.8.8', '1.1.1.1']);
+
 const { MongoClient } = require('mongodb');
 const config = require('./dbConfig.json');
 
@@ -107,6 +110,20 @@ async function deleteSongFromQueue(song) {
   await queueCollection.deleteOne(criteria);
 }
 
+async function updateSongInQueue(song) {
+  if (!song || typeof song !== 'object') {
+    throw new Error('A song object is required');
+  }
+
+  const criteria = getSongLookupCriteria(song);
+  if (Object.keys(criteria).length === 0) {
+    throw new Error('A song id or song object is required');
+  }
+
+  const { _id, ...songWithoutId } = song;
+  await queueCollection.updateOne(criteria, { $set: songWithoutId });
+}
+
 module.exports = {
   getUser,
   getUserByToken,
@@ -115,5 +132,6 @@ module.exports = {
   updateUserRemoveAuth,
   getQueue,
   addSongToQueue,
-  deleteSongFromQueue
+  deleteSongFromQueue,
+  updateSongInQueue
 };

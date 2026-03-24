@@ -52,3 +52,60 @@ export async function searchYouTube(query) {
 
     return payload.items || [];
 }
+
+export async function getQueueSongs() {
+    const response = await fetch('/api/queue', {
+        credentials: 'include',
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(payload.msg || `Queue fetch failed (${response.status})`);
+    }
+
+    return payload.items || [];
+}
+
+export async function addQueueSong(song) {
+    const response = await fetch('/api/queue', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(song),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(payload.msg || `Queue add failed (${response.status})`);
+    }
+
+    return payload.item;
+}
+
+export async function deleteQueueSong(songId) {
+    const response = await fetch(`/api/queue/${encodeURIComponent(songId)}`, {
+        method: 'DELETE',
+        credentials: 'include',
+    });
+
+    if (!response.ok && response.status !== 204) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.msg || `Queue delete failed (${response.status})`);
+    }
+}
+
+export async function toggleQueueSongLike(songId) {
+    const response = await fetch(`/api/queue/${encodeURIComponent(songId)}/like`, {
+        method: 'POST',
+        credentials: 'include',
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(payload.msg || `Queue like failed (${response.status})`);
+    }
+
+    return payload.item;
+}

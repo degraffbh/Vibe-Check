@@ -3,13 +3,10 @@ const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
 const express = require('express');
 const uuid = require('uuid');
+const DB = require('./database');
 const app = express();
 
 const authCookieName = 'token';
-
-// The scores and users are saved in memory and disappear whenever the service is restarted.
-let users = [];
-let scores = [];
 
 // The service port. In production the front-end code is statically hosted by the service on the same port.
 const port = Number(process.env.PORT || (process.argv.length > 2 ? process.argv[2] : 3000));
@@ -45,6 +42,7 @@ apiRouter.post('/auth/login', async (req, res) => {
   if (user) {
     if (await bcrypt.compare(req.body.password, user.password)) {
       user.token = uuid.v4();
+      await DB.updateUser(user);
       setAuthCookie(res, user.token);
       res.send({ email: user.email });
       return;
@@ -57,7 +55,7 @@ apiRouter.post('/auth/login', async (req, res) => {
 apiRouter.delete('/auth/logout', async (req, res) => {
   const user = await findUser('token', req.cookies[authCookieName]);
   if (user) {
-    delete user.token;
+    await DB.updateUserRemoveAuth(user);
   }
   res.clearCookie(authCookieName);
   res.status(204).end();
@@ -131,10 +129,93 @@ apiRouter.get('/youtube/search', verifyAuth, async (req, res) => {
   res.send({ items });
 });
 
+apiRouter.get('/queue', verifyAuth, async (_req, res) => {
+  const queue = await DB.getQueue();
+  res.send({ items: queue });
+});
+
+apiRouter.post('/queue', verifyAuth, async (req, res) => {
+  const song = req.body || {};
+  if (!song.videoId || !song.title) {
+    res.status(400).send({ msg: 'Song must include videoId and title' });
+    return;
+  }
+
+  const existingQueue = await DB.getQueue();
+  const user = req.user?.email || 'Anonymous';
+  const existingUserSong = existingQueue.find((queuedSong) => queuedSong.user === user);
+  if (existingUserSong) {
+    await DB.deleteSongFromQueue(existingUserSong);
+  }
+
+  const newSong = {
+    id: song.id || `${song.videoId}-${Date.now()}`,
+    videoId: song.videoId,
+    title: song.title,
+    channelTitle: song.channelTitle || 'Unknown channel',
+    thumbnail: song.thumbnail || '',
+    user,
+    likes: Array.isArray(song.likedBy) ? song.likedBy.length : Number(song.likes || 0),
+    likedBy: Array.isArray(song.likedBy) ? song.likedBy.filter(Boolean) : [],
+    timestamp: Number(song.timestamp || Date.now()),
+  };
+
+  await DB.addSongToQueue(newSong);
+  res.status(201).send({ item: newSong });
+});
+
+apiRouter.delete('/queue/:songId', verifyAuth, async (req, res) => {
+  const songId = `${req.params.songId || ''}`.trim();
+  if (!songId) {
+    res.status(400).send({ msg: 'songId is required' });
+    return;
+  }
+
+  const existingSong = await DB.getQueue({ id: songId });
+  if (!existingSong) {
+    res.status(404).send({ msg: 'Song not found' });
+    return;
+  }
+
+  await DB.deleteSongFromQueue(existingSong);
+  res.status(204).end();
+});
+
+apiRouter.post('/queue/:songId/like', verifyAuth, async (req, res) => {
+  const songId = `${req.params.songId || ''}`.trim();
+  if (!songId) {
+    res.status(400).send({ msg: 'songId is required' });
+    return;
+  }
+
+  const song = await DB.getQueue({ id: songId });
+  if (!song) {
+    res.status(404).send({ msg: 'Song not found' });
+    return;
+  }
+
+  const currentUser = req.user?.email || 'Anonymous';
+  const likedBy = Array.isArray(song.likedBy) ? song.likedBy : [];
+  const hasLiked = likedBy.includes(currentUser);
+  const updatedLikedBy = hasLiked
+    ? likedBy.filter((likedUser) => likedUser !== currentUser)
+    : [...likedBy, currentUser];
+
+  const updatedSong = {
+    ...song,
+    likedBy: updatedLikedBy,
+    likes: updatedLikedBy.length,
+  };
+
+  await DB.updateSongInQueue(updatedSong);
+  res.send({ item: updatedSong, liked: !hasLiked });
+});
+
 // Middleware to verify that the user is authorized to call an endpoint
 async function verifyAuth(req, res, next) {
   const user = await findUser('token', req.cookies[authCookieName]);
   if (user) {
+    req.user = user;
     next();
   } else {
     res.status(401).send({ msg: 'Unauthorized' });
@@ -159,7 +240,7 @@ async function createUser(email, password) {
     password: passwordHash,
     token: uuid.v4(),
   };
-  users.push(user);
+  await DB.addUser(user);
 
   return user;
 }
@@ -167,7 +248,15 @@ async function createUser(email, password) {
 async function findUser(field, value) {
   if (!value) return null;
 
-  return users.find((u) => u[field] === value);
+  if (field === 'email') {
+    return DB.getUser(value);
+  }
+
+  if (field === 'token') {
+    return DB.getUserByToken(value);
+  }
+
+  return null;
 }
 
 function parseYouTubeDurationToSeconds(duration) {

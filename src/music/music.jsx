@@ -1,7 +1,13 @@
 import React from 'react';
 import YouTube from 'react-youtube';
 import './music.css';
-import { searchYouTube } from '../service';
+import {
+  addQueueSong,
+  deleteQueueSong,
+  getQueueSongs,
+  searchYouTube,
+  toggleQueueSongLike,
+} from '../service';
 
 export function Music() {
   const [messages, setMessages] = React.useState([
@@ -14,13 +20,35 @@ export function Music() {
   const [isSearching, setIsSearching] = React.useState(false);
   const [chatInput, setChatInput] = React.useState('');
   const [queue, setQueue] = React.useState([]); 
-  const [userLikes, setUserLikes] = React.useState({}); 
+  const [queueError, setQueueError] = React.useState('');
   const [videoProgress, setVideoProgress] = React.useState(0);
   const [inJukebox, setInJukebox] = React.useState(false);
   const currentUser = localStorage.getItem('currentUser') || 'Anonymous';
   const chatBoxRef = React.useRef(null);
   const playerRef = React.useRef(null);
   const intervalRef = React.useRef(null);
+
+  const refreshQueue = React.useCallback(async () => {
+    try {
+      const songs = await getQueueSongs();
+      setQueue(songs);
+      setQueueError('');
+    } catch (err) {
+      setQueueError(err.message || 'Unable to load queue');
+    }
+  }, []);
+
+  const removeSongFromQueue = React.useCallback(async (songId) => {
+    if (!songId) return;
+
+    try {
+      await deleteQueueSong(songId);
+      setQueue((prevQueue) => prevQueue.filter((song) => song.id !== songId));
+      setQueueError('');
+    } catch (err) {
+      setQueueError(err.message || 'Unable to remove song');
+    }
+  }, []);
 
   //----Queue Logic----------------------------------------------------------------
 
@@ -30,10 +58,9 @@ export function Music() {
     addSongToQueue(searchResults[0]);
   };
 
-  const addSongToQueue = (result) => {
+  const addSongToQueue = async (result) => {
     if (!result?.videoId) return;
 
-    const userSong = queue.find(song => song.user === currentUser);
     const newSong = {
       id: `${result.videoId}-${Date.now()}`,
       videoId: result.videoId,
@@ -45,41 +72,32 @@ export function Music() {
       likedBy: [],
       timestamp: Date.now()
     };
-    let newQueue = queue;
-    if (userSong) {
-      newQueue = queue.filter(song => song.user !== currentUser);
+
+    try {
+      await addQueueSong(newSong);
+      await refreshQueue();
+      setSongInput('');
+      setSearchResults([]);
+      setSearchError('');
+    } catch (err) {
+      setSearchError(err.message || 'Unable to add song');
     }
-    setQueue([...newQueue, newSong]);
-    setSongInput('');
-    setSearchResults([]);
-    setSearchError('');
   };
 
-  const handleRemoveSong = (songId) => {
-    setQueue(queue.filter(song => song.id !== songId));
+  const handleRemoveSong = async (songId) => {
+    await removeSongFromQueue(songId);
   };
 
-  const handleLikeSong = (songId) => {
-    const alreadyLiked = userLikes[songId];
-    setUserLikes({ ...userLikes, [songId]: !alreadyLiked });
-    setQueue(queue.map(song => {
-      if (song.id === songId) {
-        if (!alreadyLiked && !song.likedBy.includes(currentUser)) {
-          return {
-            ...song,
-            likes: song.likes + 1,
-            likedBy: [...song.likedBy, currentUser]
-          };
-        } else if (alreadyLiked && song.likedBy.includes(currentUser)) {
-          return {
-            ...song,
-            likes: song.likes - 1,
-            likedBy: song.likedBy.filter(u => u !== currentUser)
-          };
-        }
-      }
-      return song;
-    }));
+  const handleLikeSong = async (songId) => {
+    try {
+      const updatedSong = await toggleQueueSongLike(songId);
+      setQueue((prevQueue) => prevQueue.map((song) => (
+        song.id === songId ? updatedSong : song
+      )));
+      setQueueError('');
+    } catch (err) {
+      setQueueError(err.message || 'Unable to update like');
+    }
   };
 
   const topSongs = [...queue]
@@ -88,6 +106,10 @@ export function Music() {
   const nowPlaying = topSongs[0];
 
   //----Song Player Logic----------------------------------------------------------------
+
+  React.useEffect(() => {
+    refreshQueue();
+  }, [refreshQueue]);
 
   React.useEffect(() => {
     if (!songInput.trim()) {
@@ -207,14 +229,15 @@ export function Music() {
         clearInterval(intervalRef.current);
       }
       if (nowPlaying) {
-        setQueue(prevQueue => prevQueue.filter(song => song.id !== nowPlaying.id));
+        removeSongFromQueue(nowPlaying.id);
       }
     }
   };
 
-  const handlePlayerError = () => {
+  const handlePlayerError = (event) => {
+    console.warn(`YouTube player error (code ${event.data}) for "${nowPlaying?.title}" — removing from queue`);
     if (nowPlaying) {
-      setQueue(prevQueue => prevQueue.filter(song => song.id !== nowPlaying.id));
+      removeSongFromQueue(nowPlaying.id);
     }
   };
 
@@ -295,6 +318,7 @@ export function Music() {
         
         <section className="card queue-section">
           <h2>Global Queue</h2>
+          {queueError && <div className="search-error">{queueError}</div>}
           <div className="songQue">
               <ol>
                   {topSongs.length === 0 ? (
@@ -309,7 +333,7 @@ export function Music() {
                         </span>
                         <span className="like-container">
                           <button
-                            className={`btn btn-primary lb${userLikes[song.id] ? ' liked' : ''}`}
+                            className={`btn btn-primary lb${(song.likedBy || []).includes(currentUser) ? ' liked' : ''}`}
                             type="button"
                             onClick={() => handleLikeSong(song.id)}
                           >❤️</button>
