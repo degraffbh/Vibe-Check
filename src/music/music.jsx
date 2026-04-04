@@ -27,7 +27,6 @@ export function Music() {
   const chatBoxRef = React.useRef(null);
   const playerRef = React.useRef(null);
   const intervalRef = React.useRef(null);
-  const wsRef = React.useRef(null);
 
   const refreshQueue = React.useCallback(async () => {
     try {
@@ -111,44 +110,6 @@ export function Music() {
   React.useEffect(() => {
     refreshQueue();
   }, [refreshQueue]);
-
-  // WebSocket connection
-  React.useEffect(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}`;
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      console.log('Connected to chat');
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-        setMessages(prev => [...prev, { ...message, id: Date.now(), isOwn: message.user === currentUser }]);
-        setTimeout(() => {
-          if (chatBoxRef.current) {
-            chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
-          }
-        }, 0);
-      } catch (err) {
-        console.error('Failed to parse message:', err);
-      }
-    };
-
-    ws.onclose = () => {
-      console.log('Disconnected from chat');
-    };
-
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-
-    return () => {
-      ws.close();
-    };
-  }, [currentUser]);
 
   React.useEffect(() => {
     if (!songInput.trim()) {
@@ -299,15 +260,23 @@ export function Music() {
 
   const handleSendMessage = (e) => {
     e.preventDefault();
-    if (chatInput.trim() === '' || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    if (chatInput.trim() === '') return;
 
-    const message = {
+    const newMessage = {
+      id: messages.length + 1,
       user: currentUser,
-      text: chatInput.trim()
+      text: chatInput,
+      isOwn: true
     };
 
-    wsRef.current.send(JSON.stringify(message));
+    setMessages([...messages, newMessage]);
     setChatInput('');
+    
+    setTimeout(() => {
+      if (chatBoxRef.current) {
+        chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+      }
+    }, 0);
   };
 
   //----------------------------------------------------------------
