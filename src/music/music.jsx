@@ -1,54 +1,136 @@
 import React from 'react';
 import YouTube from 'react-youtube';
 import './music.css';
+import { searchYouTube } from '../service';
 import {
-  addQueueSong,
-  deleteQueueSong,
-  getQueueSongs,
-  searchYouTube,
-  toggleQueueSongLike,
-} from '../service';
+  connectWebSocket,
+  disconnectWebSocket,
+  onMessage,
+  requestSyncState,
+  sendAddSong,
+  sendChatMessage,
+  sendLikeSong,
+  sendRemoveSong,
+  sendSongEnded,
+  WS_MESSAGE_TYPES,
+} from '../wsService';
 
 export function Music() {
-  const [messages, setMessages] = React.useState([
-    { id: 1, user: 'Ben DeGraff', text: 'Hi! This is a message!', isOwn: false },
-    { id: 2, user: 'You', text: 'You can send your own, it works!', isOwn: true }
-  ]);
+  const [messages, setMessages] = React.useState([]);
   const [songInput, setSongInput] = React.useState('');
   const [searchResults, setSearchResults] = React.useState([]);
   const [searchError, setSearchError] = React.useState('');
   const [isSearching, setIsSearching] = React.useState(false);
   const [chatInput, setChatInput] = React.useState('');
-  const [queue, setQueue] = React.useState([]); 
+  const [queue, setQueue] = React.useState([]);
   const [queueError, setQueueError] = React.useState('');
   const [videoProgress, setVideoProgress] = React.useState(0);
   const [inJukebox, setInJukebox] = React.useState(false);
+  const [playbackState, setPlaybackState] = React.useState({ currentSongId: null, startedAtMs: null });
   const currentUser = localStorage.getItem('currentUser') || 'Anonymous';
   const chatBoxRef = React.useRef(null);
   const playerRef = React.useRef(null);
   const intervalRef = React.useRef(null);
+  const endedSongRef = React.useRef(null);
 
-  const refreshQueue = React.useCallback(async () => {
-    try {
-      const songs = await getQueueSongs();
-      setQueue(songs);
-      setQueueError('');
-    } catch (err) {
-      setQueueError(err.message || 'Unable to load queue');
+  const normalizeUser = React.useCallback((user) => `${user || ''}`.trim().toLowerCase(), []);
+  const isOwnMessage = React.useCallback(
+    (messageUser) => normalizeUser(messageUser) === normalizeUser(currentUser),
+    [currentUser, normalizeUser]
+  );
+
+  const sortedQueue = React.useMemo(
+    () => [...queue].sort((a, b) => (b.likes || 0) - (a.likes || 0) || (a.timestamp || 0) - (b.timestamp || 0)),
+    [queue]
+  );
+
+  const nowPlaying = React.useMemo(() => {
+    if (!playbackState?.currentSongId) {
+      return null;
     }
-  }, []);
 
-  const removeSongFromQueue = React.useCallback(async (songId) => {
-    if (!songId) return;
+    return sortedQueue.find((song) => song.id === playbackState.currentSongId) || null;
+  }, [playbackState?.currentSongId, sortedQueue]);
 
-    try {
-      await deleteQueueSong(songId);
-      setQueue((prevQueue) => prevQueue.filter((song) => song.id !== songId));
-      setQueueError('');
-    } catch (err) {
-      setQueueError(err.message || 'Unable to remove song');
+  const topSongs = React.useMemo(() => sortedQueue.slice(0, 6), [sortedQueue]);
+
+  const syncPlayerToServer = React.useCallback(() => {
+    const player = playerRef.current;
+    if (!player || !nowPlaying || !playbackState?.startedAtMs) {
+      return;
     }
-  }, []);
+
+    const targetSeconds = Math.max(0, (Date.now() - playbackState.startedAtMs) / 1000);
+    try {
+      const currentSeconds = player.getCurrentTime ? player.getCurrentTime() : 0;
+      if (Math.abs(currentSeconds - targetSeconds) > 1.5 && player.seekTo) {
+        player.seekTo(targetSeconds, true);
+      }
+      if (player.playVideo) {
+        player.playVideo();
+      }
+    } catch (err) {
+      console.warn('Unable to sync local player with server playback:', err);
+    }
+  }, [nowPlaying, playbackState]);
+
+  const handleSocketMessage = React.useCallback((message) => {
+    if (!message?.type) {
+      return;
+    }
+
+    if (message.type === WS_MESSAGE_TYPES.STATE_SNAPSHOT) {
+      setQueue(Array.isArray(message.payload?.queue) ? message.payload.queue : []);
+      setMessages(
+        Array.isArray(message.payload?.chat)
+          ? message.payload.chat.map((chatMessage) => ({
+              ...chatMessage,
+              isOwn: !chatMessage.system && isOwnMessage(chatMessage.user),
+            }))
+          : []
+      );
+      setPlaybackState(message.payload?.playback || { currentSongId: null, startedAtMs: null });
+      setQueueError('');
+      return;
+    }
+
+    if (message.type === WS_MESSAGE_TYPES.CHAT_EVENT) {
+      if (message.payload) {
+        setMessages((prevMessages) => [
+          ...prevMessages.slice(-99),
+          {
+            ...message.payload,
+            isOwn: !message.payload.system && isOwnMessage(message.payload.user),
+          },
+        ]);
+      }
+      return;
+    }
+
+    if (message.type === WS_MESSAGE_TYPES.QUEUE_UPDATE) {
+      setQueue(Array.isArray(message.payload?.queue) ? message.payload.queue : []);
+      setQueueError('');
+      return;
+    }
+
+    if (message.type === WS_MESSAGE_TYPES.PLAYBACK_STATE) {
+      setPlaybackState(message.payload || { currentSongId: null, startedAtMs: null });
+      return;
+    }
+
+    if (message.type === WS_MESSAGE_TYPES.ERROR_EVENT) {
+      setQueueError(message.payload?.message || 'Real-time update failed');
+    }
+  }, [isOwnMessage]);
+
+  React.useEffect(() => {
+    setMessages((prevMessages) =>
+      prevMessages.map((message) => ({
+        ...message,
+        isOwn: !message.system && isOwnMessage(message.user),
+      }))
+    );
+  }, [isOwnMessage]);
 
   //----Queue Logic----------------------------------------------------------------
 
@@ -74,8 +156,7 @@ export function Music() {
     };
 
     try {
-      await addQueueSong(newSong);
-      await refreshQueue();
+      sendAddSong(newSong);
       setSongInput('');
       setSearchResults([]);
       setSearchError('');
@@ -85,31 +166,44 @@ export function Music() {
   };
 
   const handleRemoveSong = async (songId) => {
-    await removeSongFromQueue(songId);
+    sendRemoveSong(songId);
   };
 
   const handleLikeSong = async (songId) => {
     try {
-      const updatedSong = await toggleQueueSongLike(songId);
-      setQueue((prevQueue) => prevQueue.map((song) => (
-        song.id === songId ? updatedSong : song
-      )));
+      sendLikeSong(songId);
       setQueueError('');
     } catch (err) {
       setQueueError(err.message || 'Unable to update like');
     }
   };
 
-  const topSongs = [...queue]
-    .sort((a, b) => (b.likes || 0) - (a.likes || 0) || b.timestamp - a.timestamp)
-    .slice(0, 6);
-  const nowPlaying = topSongs[0];
-
   //----Song Player Logic----------------------------------------------------------------
 
   React.useEffect(() => {
-    refreshQueue();
-  }, [refreshQueue]);
+    let unsubscribe = () => {};
+    let cancelled = false;
+
+    unsubscribe = onMessage(handleSocketMessage);
+    connectWebSocket(currentUser)
+      .then(() => {
+        if (cancelled) {
+          return;
+        }
+        requestSyncState();
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setQueueError(err?.message || 'Unable to connect to realtime server');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+      disconnectWebSocket();
+    };
+  }, [currentUser, handleSocketMessage]);
 
   React.useEffect(() => {
     if (!songInput.trim()) {
@@ -154,6 +248,18 @@ export function Music() {
       }
     }
   }, [nowPlaying?.id]);
+
+  React.useEffect(() => {
+    endedSongRef.current = null;
+    syncPlayerToServer();
+  }, [nowPlaying?.id, playbackState?.startedAtMs, syncPlayerToServer]);
+
+  React.useEffect(() => {
+    if (!chatBoxRef.current) {
+      return;
+    }
+    chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+  }, [messages]);
 
   React.useEffect(() => {
     return () => {
@@ -201,9 +307,7 @@ export function Music() {
     if (!inJukebox) {
       event.target.mute();
     }
-    if (nowPlaying?.videoId) {
-      event.target.loadVideoById(nowPlaying.videoId);
-    }
+    syncPlayerToServer();
   };
 
   const handlePlayerStateChange = (event) => {
@@ -228,16 +332,18 @@ export function Music() {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
-      if (nowPlaying) {
-        removeSongFromQueue(nowPlaying.id);
+      if (nowPlaying && endedSongRef.current !== nowPlaying.id) {
+        endedSongRef.current = nowPlaying.id;
+        sendSongEnded(nowPlaying.id);
       }
     }
   };
 
   const handlePlayerError = (event) => {
     console.warn(`YouTube player error (code ${event.data}) for "${nowPlaying?.title}" — removing from queue`);
-    if (nowPlaying) {
-      removeSongFromQueue(nowPlaying.id);
+    if (nowPlaying && endedSongRef.current !== nowPlaying.id) {
+      endedSongRef.current = nowPlaying.id;
+      sendSongEnded(nowPlaying.id);
     }
   };
 
@@ -262,21 +368,8 @@ export function Music() {
     e.preventDefault();
     if (chatInput.trim() === '') return;
 
-    const newMessage = {
-      id: messages.length + 1,
-      user: currentUser,
-      text: chatInput,
-      isOwn: true
-    };
-
-    setMessages([...messages, newMessage]);
+    sendChatMessage(currentUser, chatInput.trim());
     setChatInput('');
-    
-    setTimeout(() => {
-      if (chatBoxRef.current) {
-        chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
-      }
-    }, 0);
   };
 
   //----------------------------------------------------------------
@@ -287,6 +380,7 @@ export function Music() {
             <div className="coverinfo">
                 {nowPlaying ? (
                   <YouTube
+                    key={nowPlaying.id}
                     className="youtube-player"
                     videoId={nowPlaying.videoId}
                     opts={playerOptions}
@@ -325,11 +419,11 @@ export function Music() {
                     <div style={{ padding: '1em', color: '#888' }}>Queue is empty</div>
                   ) : (
                     topSongs.map((song, index) => (
-                      <li className="song" key={song.id} style={index === 0 ? { backgroundColor: 'rgba(0, 255, 100, 0.1)', borderLeft: '3px solid #00ff64' } : {}}>
+                      <li className="song" key={song.id} style={song.id === nowPlaying?.id ? { backgroundColor: 'rgba(0, 255, 100, 0.1)', borderLeft: '3px solid #00ff64' } : {}}>
                         <img src={song.thumbnail || 'songcov.jpg'} alt="thumbnail" className="song-thumb" />
                         <span className="song-name">
                           {song.title}
-                          {index === 0 && <span style={{marginLeft: '0.5em', color: '#00ff64', fontSize: '0.8em', fontWeight: 'bold' }}>PLAYING NOW ▶</span>}
+                          {song.id === nowPlaying?.id && <span style={{marginLeft: '0.5em', color: '#00ff64', fontSize: '0.8em', fontWeight: 'bold' }}>PLAYING NOW ▶</span>}
                         </span>
                         <span className="like-container">
                           <button
@@ -339,7 +433,7 @@ export function Music() {
                           >❤️</button>
                           <span className="like-count">{song.likes}</span>
                         </span>
-                        {song.user === currentUser && index !== 0 && (
+                        {song.user === currentUser && song.id !== nowPlaying?.id && (
                           <button className="btn btn-outline-danger btn-sm" style={{ marginLeft: '0.5em', padding: '2px 6px', fontSize: '0.8em' }} onClick={() => handleRemoveSong(song.id)}>✕</button>
                         )}
                       </li>
@@ -388,8 +482,9 @@ export function Music() {
           <h2>Chat</h2>
           <div className="chatBox" ref={chatBoxRef}>
             {messages.map((msg) => (
-              <div key={msg.id} className={`message ${msg.isOwn ? 'sent' : 'received'}`}>
-                {!msg.isOwn && <span className="user-name">{msg.user}</span>}
+              <div key={msg.id} className={`message ${msg.system ? 'received' : msg.isOwn ? 'sent' : 'received'}`}>
+                {!msg.system && !msg.isOwn && <span className="user-name">{msg.user}</span>}
+                {msg.system && <span className="user-name">System</span>}
                 {msg.text}
               </div>
             ))}
