@@ -39,9 +39,27 @@ export function Music() {
     [currentUser, normalizeUser]
   );
 
+  const orderQueueWithCurrentSongFirst = React.useCallback((songs, currentSongId) => {
+    const orderedSongs = [...songs].sort(
+      (a, b) => (b.likes || 0) - (a.likes || 0) || (a.timestamp || 0) - (b.timestamp || 0)
+    );
+
+    if (!currentSongId) {
+      return orderedSongs;
+    }
+
+    const currentSongIndex = orderedSongs.findIndex((song) => song.id === currentSongId);
+    if (currentSongIndex <= 0) {
+      return orderedSongs;
+    }
+
+    const [currentSong] = orderedSongs.splice(currentSongIndex, 1);
+    return [currentSong, ...orderedSongs];
+  }, []);
+
   const sortedQueue = React.useMemo(
-    () => [...queue].sort((a, b) => (b.likes || 0) - (a.likes || 0) || (a.timestamp || 0) - (b.timestamp || 0)),
-    [queue]
+    () => orderQueueWithCurrentSongFirst(queue, playbackState?.currentSongId),
+    [orderQueueWithCurrentSongFirst, playbackState?.currentSongId, queue]
   );
 
   const nowPlaying = React.useMemo(() => {

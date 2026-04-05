@@ -16,8 +16,22 @@ const MESSAGE_TYPES = {
   ERROR_EVENT: 'error_event',
 };
 
-function sortQueue(queue) {
-  return [...queue].sort((a, b) => (b.likes || 0) - (a.likes || 0) || (a.timestamp || 0) - (b.timestamp || 0));
+function sortQueue(queue, currentSongId = null) {
+  const sortedQueue = [...queue].sort(
+    (a, b) => (b.likes || 0) - (a.likes || 0) || (a.timestamp || 0) - (b.timestamp || 0)
+  );
+
+  if (!currentSongId) {
+    return sortedQueue;
+  }
+
+  const currentSongIndex = sortedQueue.findIndex((song) => song.id === currentSongId);
+  if (currentSongIndex <= 0) {
+    return sortedQueue;
+  }
+
+  const [currentSong] = sortedQueue.splice(currentSongIndex, 1);
+  return [currentSong, ...sortedQueue];
 }
 
 function sanitizeUser(rawUser) {
@@ -74,7 +88,7 @@ function peerProxy(httpServer) {
   }
 
   function getQueueSorted() {
-    return sortQueue(state.queue);
+    return sortQueue(state.queue, state.playback.currentSongId);
   }
 
   function getPlaybackSnapshot() {
