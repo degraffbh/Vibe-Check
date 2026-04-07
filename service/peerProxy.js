@@ -75,7 +75,7 @@ function getOnlineUsers(socketServer) {
 }
 
 function peerProxy(httpServer) {
-  const socketServer = new WebSocketServer({ server: httpServer });
+  const socketServer = new WebSocketServer({ server: httpServer, path: '/ws' });
   const state = {
     chat: [],
     queue: [],

@@ -69,7 +69,10 @@ export function connectWebSocket(currentUser) {
     }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.hostname}:3000`;
+    const isLocalhost =
+      window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const host = isLocalhost ? `${window.location.hostname}:3000` : window.location.host;
+    const wsUrl = `${protocol}//${host}/ws`;
 
     ws = new WebSocket(wsUrl);
 
