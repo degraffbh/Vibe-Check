@@ -11,6 +11,7 @@ import {
   sendChatMessage,
   sendLikeSong,
   sendRemoveSong,
+  sendSkipVote,
   sendSongEnded,
   WS_MESSAGE_TYPES,
 } from '../wsService';
@@ -27,6 +28,14 @@ export function Music() {
   const [videoProgress, setVideoProgress] = React.useState(0);
   const [inJukebox, setInJukebox] = React.useState(false);
   const [playbackState, setPlaybackState] = React.useState({ currentSongId: null, startedAtMs: null });
+  const [skipState, setSkipState] = React.useState({
+    currentSongId: null,
+    onlineUsers: [],
+    onlineUserCount: 0,
+    votedUsers: [],
+    voteCount: 0,
+    votesNeeded: 0,
+  });
   const currentUser = localStorage.getItem('currentUser') || 'Anonymous';
   const chatBoxRef = React.useRef(null);
   const playerRef = React.useRef(null);
@@ -72,6 +81,11 @@ export function Music() {
 
   const topSongs = React.useMemo(() => sortedQueue.slice(0, 6), [sortedQueue]);
 
+  const hasCurrentUserVotedToSkip = React.useMemo(
+    () => (skipState?.votedUsers || []).includes(normalizeUser(currentUser)),
+    [currentUser, normalizeUser, skipState?.votedUsers]
+  );
+
   const syncPlayerToServer = React.useCallback(() => {
     const player = playerRef.current;
     if (!player || !nowPlaying || !playbackState?.startedAtMs) {
@@ -108,6 +122,16 @@ export function Music() {
           : []
       );
       setPlaybackState(message.payload?.playback || { currentSongId: null, startedAtMs: null });
+      setSkipState(
+        message.payload?.skip || {
+          currentSongId: null,
+          onlineUsers: [],
+          onlineUserCount: 0,
+          votedUsers: [],
+          voteCount: 0,
+          votesNeeded: 0,
+        }
+      );
       setQueueError('');
       return;
     }
@@ -133,6 +157,20 @@ export function Music() {
 
     if (message.type === WS_MESSAGE_TYPES.PLAYBACK_STATE) {
       setPlaybackState(message.payload || { currentSongId: null, startedAtMs: null });
+      return;
+    }
+
+    if (message.type === WS_MESSAGE_TYPES.SKIP_STATE) {
+      setSkipState(
+        message.payload || {
+          currentSongId: null,
+          onlineUsers: [],
+          onlineUserCount: 0,
+          votedUsers: [],
+          voteCount: 0,
+          votesNeeded: 0,
+        }
+      );
       return;
     }
 
@@ -193,6 +231,15 @@ export function Music() {
       setQueueError('');
     } catch (err) {
       setQueueError(err.message || 'Unable to update like');
+    }
+  };
+
+  const handleSkipVote = () => {
+    try {
+      sendSkipVote();
+      setQueueError('');
+    } catch (err) {
+      setQueueError(err.message || 'Unable to vote to skip');
     }
   };
 
@@ -418,13 +465,24 @@ export function Music() {
               <div className="progress-bar">
                 <div className="progress-fill" style={{ width: `${videoProgress}%` }}></div>
               </div>
-              <button 
-                className="joinJukebox btn btn-primary" 
-                type="button" 
-                onClick={handleToggleJukebox}
-              >
-                {inJukebox ? 'Leave The Jukebox' : 'Join The Jukebox'}
-              </button>
+              <div className="jukebox-actions">
+                <button 
+                  className="joinJukebox btn btn-outline-light" 
+                  type="button" 
+                  onClick={handleToggleJukebox}
+                >
+                  {inJukebox ? 'Leave The Jukebox' : 'Join The Jukebox'}
+                </button>
+                {nowPlaying && (
+                  <button
+                    className={`voteSkip btn btn-outline-light${hasCurrentUserVotedToSkip ? ' active' : ''}`}
+                    type="button"
+                    onClick={handleSkipVote}
+                  >
+                    {hasCurrentUserVotedToSkip ? 'Remove Skip Vote' : `Vote Skip Song (${skipState.voteCount}/${skipState.votesNeeded || 1})`}
+                  </button>
+                )}
+              </div>
             </div>
         </section>
         

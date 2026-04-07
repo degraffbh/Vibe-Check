@@ -15,6 +15,8 @@ const WS_MESSAGE_TYPES = {
   QUEUE_REMOVE: 'queue_remove',
   QUEUE_LIKE: 'queue_like',
   QUEUE_UPDATE: 'queue_update',
+  SKIP_VOTE: 'skip_vote',
+  SKIP_STATE: 'skip_state',
   SONG_ENDED: 'song_ended',
   PLAYBACK_STATE: 'playback_state',
   SYNC_REQUEST: 'sync_request',
@@ -154,6 +156,10 @@ export function sendLikeSong(songId) {
 
 export function sendSongEnded(songId) {
   return sendMessage(WS_MESSAGE_TYPES.SONG_ENDED, { songId });
+}
+
+export function sendSkipVote() {
+  return sendMessage(WS_MESSAGE_TYPES.SKIP_VOTE, {});
 }
 
 export function requestSyncState() {

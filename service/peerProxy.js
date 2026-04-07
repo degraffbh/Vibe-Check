@@ -9,6 +9,8 @@ const MESSAGE_TYPES = {
   QUEUE_REMOVE: 'queue_remove',
   QUEUE_LIKE: 'queue_like',
   QUEUE_UPDATE: 'queue_update',
+  SKIP_VOTE: 'skip_vote',
+  SKIP_STATE: 'skip_state',
   SONG_ENDED: 'song_ended',
   PLAYBACK_STATE: 'playback_state',
   SYNC_REQUEST: 'sync_request',
@@ -60,6 +62,18 @@ function buildSongFromPayload(song, user) {
   };
 }
 
+function getOnlineUsers(socketServer) {
+  const users = new Set();
+
+  socketServer.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN && client.introduced) {
+      users.add(sanitizeUser(client.user));
+    }
+  });
+
+  return [...users];
+}
+
 function peerProxy(httpServer) {
   const socketServer = new WebSocketServer({ server: httpServer });
   const state = {
@@ -68,6 +82,10 @@ function peerProxy(httpServer) {
     playback: {
       currentSongId: null,
       startedAtMs: null,
+    },
+    skip: {
+      currentSongId: null,
+      votedUsers: [],
     },
   };
 
@@ -98,11 +116,64 @@ function peerProxy(httpServer) {
     };
   }
 
+  function resetSkipVotes(songId = state.playback.currentSongId) {
+    state.skip = {
+      currentSongId: songId || null,
+      votedUsers: [],
+    };
+  }
+
+  function getSkipSnapshot() {
+    const currentSongId = state.playback.currentSongId || null;
+    const onlineUsers = getOnlineUsers(socketServer);
+    const votesNeeded = currentSongId ? Math.max(1, Math.ceil(onlineUsers.length / 2)) : 0;
+    const votedUsers = currentSongId && state.skip.currentSongId === currentSongId
+      ? state.skip.votedUsers.filter((user) => onlineUsers.includes(user))
+      : [];
+
+    if (currentSongId !== state.skip.currentSongId || votedUsers.length !== state.skip.votedUsers.length) {
+      state.skip = {
+        currentSongId,
+        votedUsers,
+      };
+    }
+
+    return {
+      currentSongId,
+      onlineUsers,
+      onlineUserCount: onlineUsers.length,
+      votedUsers,
+      voteCount: votedUsers.length,
+      votesNeeded,
+    };
+  }
+
+  function broadcastSkipState() {
+    broadcast(MESSAGE_TYPES.SKIP_STATE, getSkipSnapshot());
+  }
+
+  async function advanceToNextSong(songIdToRemove = state.playback.currentSongId) {
+    const songId = `${songIdToRemove || ''}`.trim();
+    if (!songId || songId !== state.playback.currentSongId) {
+      return false;
+    }
+
+    const endedSong = state.queue.find((song) => song.id === songId);
+    state.queue = state.queue.filter((song) => song.id !== songId);
+    if (endedSong) {
+      await DB.deleteSongFromQueue(endedSong);
+    }
+
+    updatePlaybackAndBroadcastIfNeeded();
+    return true;
+  }
+
   function sendStateSnapshot(socket) {
     send(socket, MESSAGE_TYPES.STATE_SNAPSHOT, {
       queue: getQueueSorted(),
       chat: state.chat,
       playback: getPlaybackSnapshot(),
+      skip: getSkipSnapshot(),
     });
   }
 
@@ -124,6 +195,7 @@ function peerProxy(httpServer) {
     const hasCurrentSong = state.playback.currentSongId
       ? sortedQueue.some((song) => song.id === state.playback.currentSongId)
       : false;
+    const previousSongId = state.playback.currentSongId;
 
     if (!hasCurrentSong) {
       const nextSong = sortedQueue[0];
@@ -139,10 +211,15 @@ function peerProxy(httpServer) {
         };
       }
 
+      if (previousSongId !== state.playback.currentSongId) {
+        resetSkipVotes(state.playback.currentSongId);
+      }
+
       broadcast(MESSAGE_TYPES.PLAYBACK_STATE, getPlaybackSnapshot());
     }
 
     broadcast(MESSAGE_TYPES.QUEUE_UPDATE, { queue: sortedQueue });
+    broadcastSkipState();
   }
 
   async function loadInitialQueue() {
@@ -155,6 +232,7 @@ function peerProxy(httpServer) {
           currentSongId: sortedQueue[0].id,
           startedAtMs: Date.now(),
         };
+        resetSkipVotes(state.playback.currentSongId);
       }
     } catch (err) {
       console.error('Failed to load initial queue state:', err);
@@ -189,6 +267,7 @@ function peerProxy(httpServer) {
           pushSystemChat(`${socket.user} joined the room`);
         }
         sendStateSnapshot(socket);
+        broadcastSkipState();
         return;
       }
 
@@ -284,20 +363,54 @@ function peerProxy(httpServer) {
         return;
       }
 
-      if (type === MESSAGE_TYPES.SONG_ENDED) {
-        const songId = `${payload?.songId || ''}`.trim();
-        if (!songId || songId !== state.playback.currentSongId) {
+      if (type === MESSAGE_TYPES.SKIP_VOTE) {
+        const currentSongId = state.playback.currentSongId;
+        if (!currentSongId) {
+          send(socket, MESSAGE_TYPES.ERROR_EVENT, { message: 'No song is currently playing' });
           return;
         }
 
-        const endedSong = state.queue.find((song) => song.id === songId);
-        state.queue = state.queue.filter((song) => song.id !== songId);
-        if (endedSong) {
-          await DB.deleteSongFromQueue(endedSong);
+        const skipSnapshot = getSkipSnapshot();
+        const voter = sanitizeUser(socket.user);
+        const hasVoted = skipSnapshot.votedUsers.includes(voter);
+        state.skip = {
+          currentSongId,
+          votedUsers: hasVoted
+            ? skipSnapshot.votedUsers.filter((user) => user !== voter)
+            : [...skipSnapshot.votedUsers, voter],
+        };
+
+        const updatedSkipSnapshot = getSkipSnapshot();
+        if (updatedSkipSnapshot.voteCount >= updatedSkipSnapshot.votesNeeded) {
+          resetSkipVotes(currentSongId);
+          await advanceToNextSong(currentSongId);
+          return;
         }
 
-        updatePlaybackAndBroadcastIfNeeded();
+        broadcastSkipState();
+        return;
       }
+
+      if (type === MESSAGE_TYPES.SONG_ENDED) {
+        const songId = `${payload?.songId || ''}`.trim();
+        await advanceToNextSong(songId);
+      }
+    });
+
+    socket.on('close', () => {
+      if (socket.introduced) {
+        pushSystemChat(`${socket.user} left the room`);
+      }
+
+      const normalizedUser = sanitizeUser(socket.user);
+      if (state.skip.votedUsers.includes(normalizedUser)) {
+        state.skip = {
+          ...state.skip,
+          votedUsers: state.skip.votedUsers.filter((user) => user !== normalizedUser),
+        };
+      }
+
+      broadcastSkipState();
     });
 
     socket.on('pong', () => {

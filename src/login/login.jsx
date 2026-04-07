@@ -51,8 +51,8 @@ export function Login({onLogin}) {
           <input type="password" placeholder="password" value={password} onChange={(e) => setPassword(e.target.value)}  />
         </div>
         <div className="d-flex justify-content-center gap-2 mt-3">
-          <button type="submit" className="btn btn-primary">Login</button>
-          <button type="button" className="btn btn-primary" onClick={handleRegister}>Create</button>
+          <button type="submit" className="btn btn-outline-light loginb">Login</button>
+          <button type="button" className="btn btn-outline-light createb" onClick={handleRegister}>Create</button>
         </div>
       </form>
     </main>

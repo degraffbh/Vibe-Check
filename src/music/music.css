@@ -127,6 +127,26 @@
 
 .progressjoin .btn {
   align-self: center; 
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+.jukebox-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.jukebox-actions .btn {
+  min-height: 44px;
+  padding: 10px 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
 }
 
 .btn-primary {
@@ -135,6 +155,15 @@
   border-radius: 8px;
   border: none;
   cursor: pointer;
+}
+
+.voteSkip {
+  min-width: 180px;
+}
+
+.voteSkip.active {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.55);
 }
 
 .queue-section, .chat-section {
