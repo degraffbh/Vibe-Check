@@ -7,7 +7,6 @@
   box-sizing: border-box;
   align-items: stretch;
   flex-grow: 1; 
-  background-image: linear-gradient(to right bottom, #6e009d, #2b102c, #1c0020);
 }
 
 .card {
