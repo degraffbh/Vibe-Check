@@ -106,8 +106,8 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
-- [ ] **Backend listens for WebSocket connection** - I did not complete this part of the deliverable.
-- [ ] **Frontend makes WebSocket connection** - I did not complete this part of the deliverable.
-- [ ] **Data sent over WebSocket connection** - I did not complete this part of the deliverable.
-- [ ] **WebSocket data displayed** - I did not complete this part of the deliverable.
-- [ ] **Application is fully functional** - I did not complete this part of the deliverable.
+- [x] **Backend listens for WebSocket connection** - I did complete this part of the deliverable. It listens for the chat, queue, and skipping song voting features. 
+- [x] **Frontend makes WebSocket connection** - I did complete this part of the deliverable. Users can see all other user interactions for the chat, queue, and skipping song voting features.
+- [x] **Data sent over WebSocket connection** - I did complete this part of the deliverable. Data is sent for the chat, queue, and skipping song voting features.
+- [x] **WebSocket data displayed** - I did complete this part of the deliverable. The WebSocket data is displayed for the chat, queue, and skipping song features.
+- [x] **Application is fully functional** - I did complete this part of the deliverable. The app fully works now!
