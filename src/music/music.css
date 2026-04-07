@@ -369,3 +369,96 @@
   padding: 8px;
   z-index: 20;
 }
+
+@media (max-width: 1100px) {
+  .vibe-main {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  .player-section {
+    max-width: none;
+    padding: 4px;
+    gap: 12px;
+  }
+
+  .coverinfo {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .coverinfo video,
+  .coverinfo .youtube-player,
+  .youtube-placeholder {
+    width: 100%;
+    max-width: none;
+  }
+
+  .youtube-placeholder {
+    min-height: 180px;
+  }
+
+  .progressjoin {
+    margin-top: 0;
+    gap: 14px;
+  }
+
+  .songQue {
+    min-height: 220px;
+  }
+
+  .chatBox {
+    flex: 1 1 auto !important;
+    min-height: 220px;
+    max-height: 320px;
+  }
+
+  #searchtext,
+  #chattext {
+    font-size: 1rem;
+  }
+
+  .search-overlay {
+    position: static;
+    margin-top: 8px;
+    max-height: 220px;
+  }
+}
+
+@media (max-width: 600px) {
+  .vibe-main {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .card {
+    padding: 10px;
+  }
+
+  .jukebox-actions .btn {
+    width: 100%;
+  }
+
+  .voteSkip {
+    min-width: 0;
+  }
+
+  .song {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .song-name {
+    font-size: 0.9rem;
+  }
+
+  .message {
+    max-width: 92%;
+  }
+}
