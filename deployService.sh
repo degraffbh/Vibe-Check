@@ -35,7 +35,7 @@ fi
 
 printf "\n----> Deploying React bundle $service to $hostname with $key\n"
 if [[ -n "$port" ]]; then
-    printf "----> Runtime port override enabled: %s\n" "$port"
+    printf '%s\n' "----> Runtime port override enabled: $port"
 fi
 
 # Step 1
