@@ -100,7 +100,6 @@ export default function App() {
         
           <footer>
             <span className="text-reset">Ben DeGraff</span>
-            <br />
             <NavLink to="https://github.com/degraffbh/Vibe-Check">GitHub</NavLink>
           </footer>
 
