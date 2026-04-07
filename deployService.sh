@@ -2,22 +2,41 @@
 
 set -euo pipefail
 
-while getopts k:h:s: flag
+key=""
+hostname=""
+service=""
+port=""
+
+while getopts k:h:s:p: flag
 do
     case "${flag}" in
         k) key=${OPTARG};;
         h) hostname=${OPTARG};;
         s) service=${OPTARG};;
+        p) port=${OPTARG};;
     esac
 done
 
 if [[ -z "$key" || -z "$hostname" || -z "$service" ]]; then
     printf "\nMissing required parameter.\n"
-    printf "  syntax: deployService.sh -k <pem key file> -h <hostname> -s <service>\n\n"
+    printf "  syntax: deployService.sh -k <pem key file> -h <hostname> -s <service> [-p <port>]\n\n"
+    exit 1
+fi
+
+if [[ -n "$port" && ! "$port" =~ ^[0-9]+$ ]]; then
+    printf "\nInvalid port '%s'. Port must be an integer.\n\n" "$port"
+    exit 1
+fi
+
+if [[ -n "$port" && ( "$port" -lt 1 || "$port" -gt 65535 ) ]]; then
+    printf "\nInvalid port '%s'. Port must be between 1 and 65535.\n\n" "$port"
     exit 1
 fi
 
 printf "\n----> Deploying React bundle $service to $hostname with $key\n"
+if [[ -n "$port" ]]; then
+    printf "----> Runtime port override enabled: %s\n" "$port"
+fi
 
 # Step 1
 printf "\n----> Build the distribution package\n"
@@ -55,7 +74,7 @@ fi
 
 # Step 4
 printf "\n----> Deploy the service on the target\n"
-ssh -T -i "$key" ubuntu@$hostname "service='${service}' bash -s" << 'ENDSSH'
+ssh -T -i "$key" ubuntu@$hostname "service='${service}' port='${port}' bash -s" << 'ENDSSH'
 set -e
 
 if [ -f "$HOME/.profile" ]; then
@@ -87,6 +106,10 @@ fi
 cd "services/${service}"
 npm install
 
+if [ -n "${port:-}" ]; then
+    export PORT="${port}"
+fi
+
 if command -v pm2 >/dev/null 2>&1; then
     if pm2 describe "${service}" >/dev/null 2>&1; then
         pm2 restart "${service}" --update-env
@@ -99,6 +122,14 @@ else
     else
         npx --yes pm2@latest start index.js --name "${service}"
     fi
+fi
+
+echo ""
+echo "Recent PM2 logs for ${service} (last 40 lines):"
+if command -v pm2 >/dev/null 2>&1; then
+    pm2 logs "${service}" --lines 40 --nostream || true
+else
+    npx --yes pm2@latest logs "${service}" --lines 40 --nostream || true
 fi
 ENDSSH
 
