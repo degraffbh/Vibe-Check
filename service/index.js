@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const express = require('express');
 const http = require('http');
 const uuid = require('uuid');
+const yts = require('yt-search');
 const DB = require('./database');
 const { peerProxy } = require('./peerProxy');
 const app = express();
@@ -63,6 +64,10 @@ apiRouter.delete('/auth/logout', async (req, res) => {
   res.status(204).end();
 });
 
+// In-memory cache for YouTube search results (1-hour TTL)
+const youtubeSearchCache = new Map();
+const YOUTUBE_CACHE_TTL_MS = 60 * 60 * 1000;
+
 // Search YouTube videos by query (requires authenticated user)
 apiRouter.get('/youtube/search', verifyAuth, async (req, res) => {
   const query = `${req.query.q || ''}`.trim();
@@ -71,64 +76,26 @@ apiRouter.get('/youtube/search', verifyAuth, async (req, res) => {
     return;
   }
 
-  const apiKey = process.env.YOUTUBE_API_KEY;
-  if (!apiKey) {
-    res.status(500).send({ msg: 'YouTube API key is not configured' });
+  const cacheKey = query.toLowerCase();
+  const cached = youtubeSearchCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < YOUTUBE_CACHE_TTL_MS) {
+    res.send({ items: cached.items });
     return;
   }
 
-  const searchParams = new URLSearchParams({
-    part: 'snippet',
-    type: 'video',
-    videoEmbeddable: 'true',
-    maxResults: '8',
-    q: query,
-    key: apiKey,
-  });
-
-  const response = await fetch(`https://www.googleapis.com/youtube/v3/search?${searchParams.toString()}`);
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    res.status(response.status).send({ msg: payload.error?.message || 'YouTube search failed' });
-    return;
-  }
-
-  const searchItems = (payload.items || []).filter((item) => item?.id?.videoId);
-  const videoIds = searchItems.map((item) => item.id.videoId);
-  if (videoIds.length === 0) {
-    res.send({ items: [] });
-    return;
-  }
-
-  const detailsParams = new URLSearchParams({
-    part: 'contentDetails',
-    id: videoIds.join(','),
-    key: apiKey,
-  });
-  const detailsResponse = await fetch(`https://www.googleapis.com/youtube/v3/videos?${detailsParams.toString()}`);
-  const detailsPayload = await detailsResponse.json().catch(() => ({}));
-  if (!detailsResponse.ok) {
-    res.status(detailsResponse.status).send({ msg: detailsPayload.error?.message || 'YouTube video details failed' });
-    return;
-  }
-
-  const durationById = new Map(
-    (detailsPayload.items || []).map((item) => [
-      item.id,
-      parseYouTubeDurationToSeconds(item.contentDetails?.duration || 'PT0S'),
-    ])
-  );
-
-  const items = searchItems
-    .filter((item) => (durationById.get(item.id.videoId) ?? Number.POSITIVE_INFINITY) <= 300)
-    .map((item) => ({
-      videoId: item.id.videoId,
-      title: item.snippet?.title || 'Unknown title',
-      channelTitle: item.snippet?.channelTitle || 'Unknown channel',
-      thumbnail: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || '',
+  const result = await yts(query);
+  const items = (result.videos || [])
+    .filter((video) => video.seconds > 0 && video.seconds <= 300)
+    .slice(0, 8)
+    .map((video) => ({
+      videoId: video.videoId,
+      title: video.title || 'Unknown title',
+      channelTitle: video.author?.name || 'Unknown channel',
+      thumbnail: video.thumbnail || '',
     }));
 
   res.send({ items });
+  youtubeSearchCache.set(cacheKey, { items, timestamp: Date.now() });
 });
 
 apiRouter.get('/queue', verifyAuth, async (_req, res) => {
@@ -261,17 +228,7 @@ async function findUser(field, value) {
   return null;
 }
 
-function parseYouTubeDurationToSeconds(duration) {
-  const match = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(duration || '');
-  if (!match) {
-    return 0;
-  }
 
-  const hours = Number(match[1] || 0);
-  const minutes = Number(match[2] || 0);
-  const seconds = Number(match[3] || 0);
-  return hours * 3600 + minutes * 60 + seconds;
-}
 
 // setAuthCookie in the HTTP response
 function setAuthCookie(res, authToken) {
