@@ -41,6 +41,35 @@ export function Music() {
   const playerRef = React.useRef(null);
   const intervalRef = React.useRef(null);
   const endedSongRef = React.useRef(null);
+  const initialChatScrollDoneRef = React.useRef(false);
+  const initialChatScrollLockStartedRef = React.useRef(false);
+
+  const scrollChatToBottom = React.useCallback(() => {
+    const chatBox = chatBoxRef.current;
+    if (!chatBox) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      if (chatBoxRef.current) {
+        chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
+      }
+    });
+  }, []);
+
+  const scheduleChatScroll = React.useCallback(() => {
+    scrollChatToBottom();
+
+    const retryOne = setTimeout(scrollChatToBottom, 80);
+    const retryTwo = setTimeout(scrollChatToBottom, 220);
+    const retryThree = setTimeout(scrollChatToBottom, 500);
+
+    return () => {
+      clearTimeout(retryOne);
+      clearTimeout(retryTwo);
+      clearTimeout(retryThree);
+    };
+  }, [scrollChatToBottom]);
 
   const normalizeUser = React.useCallback((user) => `${user || ''}`.trim().toLowerCase(), []);
   const isOwnMessage = React.useCallback(
@@ -133,6 +162,7 @@ export function Music() {
         }
       );
       setQueueError('');
+      scheduleChatScroll();
       return;
     }
 
@@ -145,6 +175,7 @@ export function Music() {
             isOwn: !message.payload.system && isOwnMessage(message.payload.user),
           },
         ]);
+        scheduleChatScroll();
       }
       return;
     }
@@ -177,7 +208,7 @@ export function Music() {
     if (message.type === WS_MESSAGE_TYPES.ERROR_EVENT) {
       setQueueError(message.payload?.message || 'Real-time update failed');
     }
-  }, [isOwnMessage]);
+  }, [isOwnMessage, scheduleChatScroll]);
 
   React.useEffect(() => {
     setMessages((prevMessages) =>
@@ -319,12 +350,51 @@ export function Music() {
     syncPlayerToServer();
   }, [nowPlaying?.id, playbackState?.startedAtMs, syncPlayerToServer]);
 
+  React.useLayoutEffect(() => {
+    scrollChatToBottom();
+  }, [scrollChatToBottom]);
+
   React.useEffect(() => {
-    if (!chatBoxRef.current) {
+    if (initialChatScrollLockStartedRef.current) {
       return;
     }
-    chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
-  }, [messages]);
+
+    initialChatScrollLockStartedRef.current = true;
+
+    const intervalId = setInterval(() => {
+      const chatBox = chatBoxRef.current;
+      if (!chatBox) {
+        return;
+      }
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }, 50);
+
+    const timeoutId = setTimeout(() => {
+      clearInterval(intervalId);
+    }, 2000);
+
+    return () => {
+      clearInterval(intervalId);
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    scrollChatToBottom();
+  }, [messages, scrollChatToBottom]);
+
+  React.useEffect(() => {
+    if (initialChatScrollDoneRef.current || messages.length === 0) {
+      return;
+    }
+
+    initialChatScrollDoneRef.current = true;
+    const cleanup = scheduleChatScroll();
+
+    return () => {
+      cleanup();
+    };
+  }, [messages.length, scheduleChatScroll]);
 
   React.useEffect(() => {
     return () => {
