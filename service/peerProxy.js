@@ -152,6 +152,21 @@ function peerProxy(httpServer) {
     broadcast(MESSAGE_TYPES.SKIP_STATE, getSkipSnapshot());
   }
 
+  async function maybeSkipCurrentSong(skipSnapshot = getSkipSnapshot()) {
+    const currentSongId = state.playback.currentSongId;
+    if (!currentSongId) {
+      return false;
+    }
+
+    if (skipSnapshot.voteCount < skipSnapshot.votesNeeded) {
+      return false;
+    }
+
+    resetSkipVotes(currentSongId);
+    await advanceToNextSong(currentSongId);
+    return true;
+  }
+
   async function advanceToNextSong(songIdToRemove = state.playback.currentSongId) {
     const songId = `${songIdToRemove || ''}`.trim();
     if (!songId || songId !== state.playback.currentSongId) {
@@ -381,9 +396,7 @@ function peerProxy(httpServer) {
         };
 
         const updatedSkipSnapshot = getSkipSnapshot();
-        if (updatedSkipSnapshot.voteCount >= updatedSkipSnapshot.votesNeeded) {
-          resetSkipVotes(currentSongId);
-          await advanceToNextSong(currentSongId);
+        if (await maybeSkipCurrentSong(updatedSkipSnapshot)) {
           return;
         }
 
@@ -397,7 +410,7 @@ function peerProxy(httpServer) {
       }
     });
 
-    socket.on('close', () => {
+    socket.on('close', async () => {
       if (socket.introduced) {
         pushSystemChat(`${socket.user} left the room`);
       }
@@ -408,6 +421,11 @@ function peerProxy(httpServer) {
           ...state.skip,
           votedUsers: state.skip.votedUsers.filter((user) => user !== normalizedUser),
         };
+      }
+
+      const skipSnapshot = getSkipSnapshot();
+      if (await maybeSkipCurrentSong(skipSnapshot)) {
+        return;
       }
 
       broadcastSkipState();
